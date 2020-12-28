@@ -1,5 +1,6 @@
 import os
 import subprocess
+import json
 
 import angr
 import pwn
@@ -12,30 +13,30 @@ import analyses
 def call_dorat(binaryname):
     result = {}
     
-    proc = subprocess.run(["dorat", "--binary", binaryname], stdout=subprocess.PIPE)
+    proc = subprocess.run(["dorat", "--binary", binaryname, '--script', 'FunctionCalls.java'], stdout=subprocess.PIPE)
     stdout = str(proc.stdout, "utf8")
-
+    return json.loads(stdout)
 
 class Ashnazg:
-    def __init__(self, binary : str, libc : str):
-        self.binary = binary
+    def __init__(self, binary : str, libc : str = None):
+        self.binaryname = binary
         self.binary_elf = pwn.ELF(binary)
         self.project = angr.Project(binary)
         self.db = BinaryDb()
 
     def find_vulnerable_functions(self):
         # check function database
-        if self.db.check(self.binary):
-            functions = self.db.get(self.binary, "functions")
+        if self.db.check(self.binaryname, 'dorat'):
+            dorat = self.db.get(self.binaryname, "dorat")
         else:
-            functions = call_dorat()
-            self.db.add(self.binaryname, 'functions', functions)
-            self.db.save('functions', functions)
+            dorat = call_dorat(self.binaryname)
+            self.db.add(self.binaryname, 'dorat', dorat)
+            self.db.save()
         vulns = []  
         # analyze functions for call
-        for function in functions:
+        for function in dorat["functions"]:
             for vuln in analyses.ANALYSES:
-                result = vuln.detect(function, functions)
+                result = vuln.detect(function, dorat['functions'])
                 if result:
                     vulns.append(vuln)
         return vulns
