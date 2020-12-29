@@ -10,6 +10,9 @@ from smrop import BinaryDb
 
 import analyses
 
+# TODO: Look this up using something less system specific
+DEFAULT_LIBC="/lib/x86_64-linux-gnu/libc.so.6"
+
 def call_dorat(binaryname):
     result = {}
     
@@ -19,24 +22,27 @@ def call_dorat(binaryname):
 
 class Ashnazg:
     def __init__(self, binary : str, libc : str = None):
+        if libc == None:
+            libc = DEFAULT_LIBC
         self.binaryname = binary
         self.binary_elf = pwn.ELF(binary)
+        self.libc_elf = pwn.ELF(libc)
         self.project = angr.Project(binary)
         self.db = BinaryDb()
 
     def find_vulnerable_functions(self):
         # check function database
         if self.db.check(self.binaryname, 'dorat'):
-            dorat = self.db.get(self.binaryname, "dorat")
+            program = self.db.get(self.binaryname, "dorat")
         else:
-            dorat = call_dorat(self.binaryname)
-            self.db.add(self.binaryname, 'dorat', dorat)
+            program = call_dorat(self.binaryname)
+            self.db.add(self.binaryname, 'dorat', program)
             self.db.save()
         vulns = []  
         # analyze functions for call
-        for function in dorat["functions"]:
+        for function in program["functions"]:
             for vuln in analyses.ANALYSES:
-                result = vuln.detect(function, dorat['functions'])
+                result = vuln(function, self.binary_elf).detect(function, program['functions'])
                 if result:
                     vulns.append(vuln)
         return vulns
@@ -86,19 +92,7 @@ class Connection:
         self.transcription += self.recv()
 
     def exploit(self, vuln, assume):
-        payload = vuln.exploit()
-
-
+        vuln.exploit(self)
 
     def interactive(self):
         self.conn.interactive()
-
-class Exploit:
-    def __init__(self, conn, payload):
-        self.conn = conn
-        self.payload = payload
-
-    def execute(self):
-        # this is wrong; we need to be able
-        # to have
-        self.conn.send(self.payload)

