@@ -42,17 +42,18 @@ class Ashnazg:
         # analyze functions for call
         for function in program["functions"]:
             for vuln in analyses.ANALYSES:
-                result = vuln(function, self.binary_elf).detect(function, program['functions'])
+                vuln_instance = vuln(function, self.binary_elf, self.libc_elf)
+                result = vuln_instance.detect(function, program['functions'])
                 if result:
-                    vulns.append(vuln)
+                    vulns.append(vuln_instance)
         return vulns
 
 
     def connect(self, remote=None):
         if remote:
-            self.connection = Connection(remote=remote) 
+            self.connection = Connection(self, remote=remote) 
         else:
-            self.connection = Connection(binary=self.binary) 
+            self.connection = Connection(self, binary=self.binaryname) 
         return self.connection
 
     def lookup(self, function):
@@ -74,6 +75,7 @@ class Connection:
         entry_state = nazg.project.factory.entry_state()
         self.simgr : angr.SimulationManager = nazg.project.factory.simulation_manager(entry_state)
 
+        self.nazg = nazg
         self.transcription = ""
 
         if binary:
@@ -81,17 +83,19 @@ class Connection:
         elif remote:
             self.conn = pwn.remote(remote)
 
-    def navigate(self, function ):
+    def navigate(self, function_addr):
         # find inputs to navigate to target function
-        self.simgr.explore(self.nazg.lookup(function))
+        self.simgr.explore(find=function_addr)
         if not self.simgr.found:
-            raise Exception("Could not find path to '{}'".format(function))
+            raise Exception("Could not find path to '{}'".format(hex(function_addr)))
         found_state = self.simgr.found[0]
         found_input = found_state.posix.dumps(0)
         self.conn.send(found_input)
-        self.transcription += self.recv()
+        expected_output = found_state.posix.dumps(1)
+        if expected_output:
+            self.transcription += self.conn.recv(len(expected_output))
 
-    def exploit(self, vuln, assume):
+    def exploit(self, vuln, assume=None):
         vuln.exploit(self)
 
     def interactive(self):

