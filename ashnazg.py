@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import json
@@ -9,6 +10,10 @@ import smrop
 from smrop import BinaryDb
 
 import analyses
+
+# clean up logging for pwnlib
+pwnlog = logging.getLogger('pwnlib')
+pwnlog.setLevel('ERROR')
 
 # TODO: Look this up using something less system specific
 DEFAULT_LIBC="/lib/x86_64-linux-gnu/libc.so.6"
