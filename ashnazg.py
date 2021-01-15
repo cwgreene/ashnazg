@@ -32,7 +32,7 @@ class Ashnazg:
         self.binaryname = binary
         self.binary_elf = pwn.ELF(binary)
         self.libc_elf = pwn.ELF(libc)
-        self.project = angr.Project(binary)
+        self.project = angr.Project(binary, auto_load_libs=False)
         self.db = BinaryDb()
 
     def find_vulnerable_functions(self):
@@ -54,11 +54,11 @@ class Ashnazg:
         return vulns
 
 
-    def connect(self, remote=None):
+    def connect(self, remote=None, debug=False):
         if remote:
             self.connection = Connection(self, remote=remote) 
         else:
-            self.connection = Connection(self, binary=self.binaryname) 
+            self.connection = Connection(self, binary=self.binaryname, debug=debug) 
         return self.connection
 
     def lookup(self, function):
@@ -72,7 +72,8 @@ class Connection:
     def __init__(self, 
             nazg : Ashnazg, 
             binary : str = None, 
-            remote : str = None):
+            remote : str = None,
+            debug : bool = False):
         if binary is None and remote is None:
             raise TypeError("{}: either 'binary' or 'remote' must be specified"
                 .format(self.__name__))
@@ -81,10 +82,13 @@ class Connection:
         self.simgr : angr.SimulationManager = nazg.project.factory.simulation_manager(entry_state)
 
         self.nazg = nazg
-        self.transcription = ""
+        self.transcription = b""
 
         if binary:
-            self.conn = pwn.process(binary)
+            if debug:
+                self.conn = pwn.gdb.debug(binary)
+            else:
+                self.conn = pwn.process(binary)
         elif remote:
             self.conn = pwn.remote(remote)
 

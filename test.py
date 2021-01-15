@@ -1,11 +1,9 @@
 import ashnazg
 
-nazg = ashnazg.Ashnazg(binary="./tests/nocanarypie/nocanarypie")
+nazg = ashnazg.Ashnazg(binary="./tests/nocanarypie/nocanarypie2")
 
 # find a vulnerable function
 vuln = list(nazg.find_vulnerable_functions())[0]
-print(vuln)
-#print(vuln.type) # says 'GETS' vulnerability
 
 # begin exploit
 conn = nazg.connect()

