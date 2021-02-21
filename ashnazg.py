@@ -78,7 +78,10 @@ class Connection:
             raise TypeError("{}: either 'binary' or 'remote' must be specified"
                 .format(self.__name__))
         # setup simulation manager
-        entry_state = nazg.project.factory.entry_state()
+        entry_state = nazg.project.factory.entry_state(addr=0x00401de5)
+        entry_state.options.add(angr.options.UNICORN)
+        entry_state.options.add(angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY)
+        
         self.simgr : angr.SimulationManager = nazg.project.factory.simulation_manager(entry_state)
 
         self.nazg = nazg
@@ -94,6 +97,7 @@ class Connection:
 
     def navigate(self, function_addr):
         # find inputs to navigate to target function
+        print(hex(function_addr))
         self.simgr.explore(find=function_addr)
         if not self.simgr.found:
             raise Exception("Could not find path to '{}'".format(hex(function_addr)))
