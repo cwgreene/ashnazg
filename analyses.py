@@ -48,7 +48,9 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # instantiate the exploit. Maybe detect
         # is a static method?
         for call in function["calls"]:
+            print(call)
             if call["funcName"] == "gets":
+                print("hello!")
                 self.targetFunc = call
                 # assume stack for now
                 # need to add check to validate
