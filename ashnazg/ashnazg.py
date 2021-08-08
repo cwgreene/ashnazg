@@ -111,5 +111,11 @@ class Connection:
     def exploit(self, vuln, assume=None):
         vuln.exploit(self)
 
+    def send(self, bs):
+        return self.conn.send(bs)
+
+    def recv(self):
+        return self.conn.recv()
+
     def interactive(self):
         self.conn.interactive()

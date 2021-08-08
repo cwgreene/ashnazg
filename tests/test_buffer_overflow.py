@@ -31,3 +31,10 @@ def test_can_exploit_buffer_overflow():
     # automatically detected, but we explicitly assume
     # it here.
     conn.exploit(vuln)
+
+    # clear up any output prior to shell
+    _ = conn.recv()
+
+    conn.send(b"echo hello world\n")
+    text = conn.recv()
+    nose.tools.ok_(text == b"hello world\n", "Failed to execute echo command!")

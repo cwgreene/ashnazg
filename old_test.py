@@ -17,7 +17,7 @@ conn.navigate(vuln.entry())
 # automatically detected, but we explicitly assume
 # it here.
 conn.exploit(vuln)
-
+print("exploiting!")
 # you have a shell
 conn.interactive()
  
