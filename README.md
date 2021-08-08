@@ -8,6 +8,9 @@ exploits. It brings together a number of different
 tools, Ghidra, `dorat`, `ROPgadget`, `pwntools`, `angr`,
 smrop, and binds them together to pop shells.
 
+# Testing
+Run `nose2 --verbose`.
+
 # Example
 Ashnazg is intended to make it possible to describe
 exploits at a high level.
