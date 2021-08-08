@@ -9,7 +9,7 @@ import smrop
 
 from smrop import BinaryDb
 
-import analyses
+import ashnazg.analyses as analyses
 
 # clean up logging for pwnlib
 pwnlog = logging.getLogger('pwnlib')
@@ -97,7 +97,7 @@ class Connection:
 
     def navigate(self, function_addr):
         # find inputs to navigate to target function
-        print(hex(function_addr))
+        #print(hex(function_addr))
         self.simgr.explore(find=function_addr)
         if not self.simgr.found:
             raise Exception("Could not find path to '{}'".format(hex(function_addr)))

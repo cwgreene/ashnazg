@@ -1,1 +1,1 @@
-from ashnazg import *
+from .ashnazg import *

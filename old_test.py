@@ -1,6 +1,6 @@
 import ashnazg
 
-nazg = ashnazg.Ashnazg(binary="./hotel_rop")
+nazg = ashnazg.Ashnazg(binary="./test_data/nocanarypie/nocanarypie")
 
 # find a vulnerable function
 vuln = list(nazg.find_vulnerable_functions())[0]

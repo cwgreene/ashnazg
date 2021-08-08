@@ -11,6 +11,7 @@ def register(clazz):
     # here, makes more sense to instantiate
     # when the program context is available.
     ANALYSES.append(clazz)
+    return clazz
 
 class Vulnerability:
     def __init__(self, function, binary : pwn.ELF, libc : pwn.ELF):
@@ -48,9 +49,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # instantiate the exploit. Maybe detect
         # is a static method?
         for call in function["calls"]:
-            print(call)
             if call["funcName"] == "gets":
-                print("hello!")
                 self.targetFunc = call
                 # assume stack for now
                 # need to add check to validate
@@ -58,7 +57,6 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 # otherwise, this is not exploitable
                 # via this technique
                 # TODO: Add check
-                print(call)
                 arg = call["arguments"][0]
                 arg = [v for v in self.function["variables"] if v["name"] == arg][0]
                 stackoffset = arg["stackOffset"]
