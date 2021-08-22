@@ -93,7 +93,7 @@ class Connection:
             else:
                 self.conn = pwn.process(binary)
         elif remote:
-            self.conn = pwn.remote(remote)
+            self.conn = pwn.remote(*remote)
 
     def navigate(self, function_addr):
         # find inputs to navigate to target function
