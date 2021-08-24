@@ -7,4 +7,5 @@ setup(
    author_email='archgoon+ashnazg@gmail.com',
    packages=['ashnazg', 'ashnazg.analyses'],  #same as name
    install_requires=[], #external packages as dependencies
+   scripts=["bin/ashnazg"]
 )

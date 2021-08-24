@@ -97,7 +97,6 @@ class Connection:
 
     def navigate(self, function_addr):
         # find inputs to navigate to target function
-        #print(hex(function_addr))
         self.simgr.explore(find=function_addr)
         if not self.simgr.found:
             raise Exception("Could not find path to '{}'".format(hex(function_addr)))
