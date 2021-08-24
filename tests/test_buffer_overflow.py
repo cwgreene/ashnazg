@@ -37,4 +37,5 @@ def test_can_exploit_buffer_overflow():
 
     conn.send(b"echo hello world\n")
     text = conn.recv()
+
     nose.tools.ok_(text == b"hello world\n", "Failed to execute echo command!")
