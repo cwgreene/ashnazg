@@ -25,6 +25,11 @@ def call_dorat(binaryname):
     stdout = str(proc.stdout, "utf8")
     return json.loads(stdout)
 
+class Context:
+    def __init__(self, binary, libc):
+        self.binary = binary
+        self.libc = libc
+
 class Ashnazg:
     def __init__(self, binary : str, libc : str = None):
         if libc == None:
@@ -47,10 +52,9 @@ class Ashnazg:
         # analyze functions for call
         for function in program["functions"]:
             for vuln in analyses.ANALYSES:
-                vuln_instance = vuln(function, self.binary_elf, self.libc_elf)
-                result = vuln_instance.detect(function, program['functions'])
+                result = vuln.detect(Context(self.binary_elf, self.libc_elf), function, program['functions'])
                 if result:
-                    vulns.append(vuln_instance)
+                    vulns.append(result)
         return vulns
 
 

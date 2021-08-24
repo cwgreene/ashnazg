@@ -14,10 +14,12 @@ def register(clazz):
     return clazz
 
 class Vulnerability:
-    def __init__(self, function, binary : pwn.ELF, libc : pwn.ELF):
+    @staticmethod
+    def detect(context, function, program):
         raise NotImplementedError()
-
-    def detect(self, function, program):
+    
+    # Probably don't care about this interface, we instantiate in detect
+    def __init__(self, function, binary : pwn.ELF, libc : pwn.ELF):
         raise NotImplementedError()
     
     def exploit(self, function):
@@ -39,18 +41,25 @@ def getLocal(name, function):
 @register
 class StackBufferOverflowVulnerability(Vulnerability):
 
-    def __init__(self, function, binary : pwn.ELF, libc : pwn.ELF):
+    def __init__(self,
+            function,
+            binary : pwn.ELF,
+            libc : pwn.ELF,
+            targetFunc,
+            stackOffset,
+            suffix):
         self.function = function
         self.binary = binary
         self.libc = libc
+        self.targetFunc = targetFunc
+        self.stackOffset = stackOffset
+        self.suffix = suffix
 
-    def detect(self, function, program):
-        # TODO: I *think* this is where we actually
-        # instantiate the exploit. Maybe detect
-        # is a static method?
+    @staticmethod
+    def detect(context, function, program):
         for call in function["calls"]:
             if call["funcName"] == "gets":
-                self.targetFunc = call
+                targetFunc = call
                 # assume stack for now
                 # need to add check to validate
                 # that the argument is on the stack.
@@ -58,12 +67,20 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 # via this technique
                 # TODO: Add check
                 arg = call["arguments"][0]
-                arg = [v for v in self.function["variables"] if v["name"] == arg][0]
-                stackoffset = arg["stackOffset"]
-                self.stackOffset = arg["stackOffset"]
+                arg = [v for v in function["variables"] if v["name"] == arg][0]
+                stackOffset = arg["stackOffset"]
                 # TODO: automatically determine "suffix"
-                self.suffix = None
-                return True
+                suffix = None
+                return StackBufferOverflowVulnerability(function,
+                    context.binary,
+                    context.libc,
+                    targetFunc=targetFunc,
+                    stackOffset=stackOffset,
+                    suffix=suffix)
+                    
+            # Work in progress apparently
+            # Notes, uses old construction logic, need to update when you get around
+            # to it
             continue
             if call["funcName"] == "read":
                 targetBuffer = call["arguments"][1]
@@ -75,11 +92,11 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     if targetSize > stackOffset:
                         self.targetFunc = call
                         self.stackOffset = stackOffset
-                        return True
+                        return BufferOverflow
                 # TODO: find calls to functions for potentially vulnerable 
                 # variables.
-                return False
-        return False
+                return None
+        return None
 
     def entry(self):
         return int(self.function["address"], 16)
