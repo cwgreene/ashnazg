@@ -1,6 +1,9 @@
 import nose
 
 import ashnazg
+import logging
+ashnazg_log = logging.getLogger("ashnazg")
+ashnazg_log.setLevel("DEBUG")
 
 from ashnazg.analyses import StackBufferOverflowVulnerability
 
