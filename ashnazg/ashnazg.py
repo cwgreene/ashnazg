@@ -115,7 +115,7 @@ class Connection:
     def navigate(self, function_addr):
         ashnazg_log.info(f"Navigating program to {hex(function_addr)}")
         # find inputs to navigate to target function
-        ashnazg_log.info(f"Simulating program locally")
+        ashnazg_log.info(f"Simulating program locally to determine initial input.")
         self.simgr.explore(find=function_addr)
         if not self.simgr.found:
             raise Exception("Could not find path to '{}'".format(hex(function_addr)))
