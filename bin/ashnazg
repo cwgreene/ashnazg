@@ -2,10 +2,12 @@
 import argparse
 
 import ashnazg
+
+import colorama
 import logging
 
-def exploit(options):
-    nazg = ashnazg.Ashnazg(options.binary, libc=options.libc)
+def exploit(options, args):
+    nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, options=args)
 
     # find a vulnerable function
     vulns = list(nazg.find_vulnerable_functions())
@@ -22,9 +24,6 @@ def exploit(options):
         remote = (host,port)
     conn = nazg.connect(remote=remote)
 
-    if options.suffix:
-        vuln.suffix = options.suffix.replace("\\n","\n")
-
     # get the program to the vulnerable function
     # input.
     conn.navigate(vuln.entry())
@@ -38,25 +37,50 @@ def exploit(options):
     # clear up any output prior to shell
     conn.interactive()
 
+def parse_vuln_args(options):
+    args = {}
+    for arg in options.args:
+        key, value = arg.split("=")
+        args[key] = value
+    return args
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--binary", required=True, help="target binary")
+    parser.add_argument("--binary", help="target binary (required for --detect and regular mode)")
     parser.add_argument("--libc", help="libc to use")
     # TODO: `suffix` is a huge hack. should come
     # up with a generic way of passing exploit specific arguments
-    parser.add_argument("--suffix", help="hacky way of passing in suffixes for buffer overflow")
+    parser.add_argument("--args", nargs="*", default=[], help="pass arguments to specific vulns. Run --list for more information.")
     parser.add_argument("--remote", help="if specified, connect to 'host:port'")
     parser.add_argument("--verbose", action="store_true", help="increase log level")
     parser.add_argument("--detect", action="store_true", help="run detections, do not attempt exploit")
+    parser.add_argument("--list", action="store_true", help="show possible vulnerabilities and options")
     options = parser.parse_args()
 
     angr_logger = logging.getLogger('angr')
     angr_logger.setLevel(logging.CRITICAL)
 
+    args = parse_vuln_args(options)
+
     if options.verbose:
         logging.getLogger("ashnazg").setLevel("DEBUG")
+    if options.list:
+        red = lambda s: f"{colorama.Fore.RED}{s}{colorama.Fore.RESET}"
+        yellow = lambda s: f"{colorama.Fore.YELLOW}{s}{colorama.Fore.RESET}"
+        blue = lambda s: f"{colorama.Fore.BLUE}{s}{colorama.Fore.RESET}"
+        green = lambda s: f"{colorama.Fore.GREEN}{s}{colorama.Fore.RESET}"
+        for vuln in ashnazg.analyses.ANALYSES:
+            print(f"{yellow(vuln.name)} [{blue(vuln.short_name)}]")
+            for option, type, desc in vuln.options:
+                option_path = f"{vuln.short_name}.{option}"
+                print(f"  {blue(option_path)} [{green(type)}] {desc}")
+        return
+    if not options.binary:
+        print("Need to specify --binary")
+        parser.print_help()
+        return
     if options.detect:
-        nazg = ashnazg.Ashnazg(options.binary, libc=options.libc)
+        nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, options=args)
         for vuln in nazg.find_vulnerable_functions():
             print(vuln)
     else:

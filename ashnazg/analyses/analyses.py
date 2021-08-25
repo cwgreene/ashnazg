@@ -42,8 +42,9 @@ def getLocal(name, function):
 
 @register
 class StackBufferOverflowVulnerability(Vulnerability):
-
     name = "StackBufferOverflowVulnerability"
+    short_name = "sbo"
+    options = [("suffix", "str", "Ouput immediately after the buffer overflow call.")]
 
     def __init__(self,
             function,
@@ -72,7 +73,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         return json.dumps(fields, indent=2)
 
     @staticmethod
-    def detect(context, function, program):
+    def detect(context, function, program, options):
         for call in function["calls"]:
             if call["funcName"] == "gets":
                 targetFunc = call
@@ -86,7 +87,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 arg = [v for v in function["variables"] if v["name"] == arg][0]
                 stackOffset = arg["stackOffset"]
                 # TODO: automatically determine "suffix"
-                suffix = None
+                suffix = options.get("sbo.suffix", None)
                 return StackBufferOverflowVulnerability(function,
                     context.binary,
                     context.libc,

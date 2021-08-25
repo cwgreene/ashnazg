@@ -34,7 +34,7 @@ class Context:
         self.libc = libc
 
 class Ashnazg:
-    def __init__(self, binary : str, libc : str = None):
+    def __init__(self, binary : str, libc : str = None, options : dict = None):
         if libc == None:
             libc = DEFAULT_LIBC
         self.binaryname = binary
