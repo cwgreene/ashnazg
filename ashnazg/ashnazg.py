@@ -115,17 +115,17 @@ class Connection:
     def navigate(self, function_addr):
         ashnazg_log.info(f"Navigating program to {hex(function_addr)}")
         # find inputs to navigate to target function
-        ashnazg_log.info(f"Simulating program locally to determine initial input.")
+        ashnazg_log.info(f"Simulating program locally to determine navigation input.")
         self.simgr.explore(find=function_addr)
         if not self.simgr.found:
             raise Exception("Could not find path to '{}'".format(hex(function_addr)))
         found_state = self.simgr.found[0]
         found_input = found_state.posix.dumps(0)
-        ashnazg_log.info(f"Sending initial input to target: {found_input}")
+        ashnazg_log.info(f"Sending navigation input to target: {found_input}")
         self.conn.send(found_input)
         expected_output = found_state.posix.dumps(1)
         if expected_output:
-            ashnazg_log.info(f"Capturing expected value: {expected_output}")
+            ashnazg_log.info(f"Capturing expected output: {expected_output}")
             self.transcription += self.conn.recv(len(expected_output))
 
     def exploit(self, vuln, assume=None):
