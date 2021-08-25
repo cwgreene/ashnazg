@@ -40,14 +40,14 @@ def exploit(options):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--binary", required=True)
-    parser.add_argument("--libc")
+    parser.add_argument("--binary", required=True, help="target binary")
+    parser.add_argument("--libc", help="libc to use")
     # TODO: `suffix` is a huge hack. should come
     # up with a generic way of passing exploit specific arguments
-    parser.add_argument("--suffix")
-    parser.add_argument("--remote")
-    parser.add_argument("--verbose", action="store_true")
-    parser.add_argument("--detect", action="store_true")
+    parser.add_argument("--suffix", help="hacky way of passing in suffixes for buffer overflow")
+    parser.add_argument("--remote", help="if specified, connect to 'host:port'")
+    parser.add_argument("--verbose", action="store_true", help="increase log level")
+    parser.add_argument("--detect", action="store_true", help="run detections, do not attempt exploit")
     options = parser.parse_args()
 
     angr_logger = logging.getLogger('angr')
