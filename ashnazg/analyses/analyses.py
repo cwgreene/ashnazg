@@ -90,7 +90,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 stackOffset = arg["stackOffset"]
                 # TODO: automatically determine "suffix"
                 suffix = options.get("sbo.suffix", None)
-                suffix = suffix.replace("\\n", "\n")
+                if suffix:
+                    suffix = suffix.replace("\\n", "\n")
                 return StackBufferOverflowVulnerability(function,
                     context.binary,
                     context.libc,

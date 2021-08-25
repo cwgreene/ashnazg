@@ -80,7 +80,7 @@ def main():
         parser.print_help()
         return
     if options.detect:
-        nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, options=vuln_args)
+        nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, vuln_args=vuln_args)
         for vuln in nazg.find_vulnerable_functions():
             print(vuln)
     else:
