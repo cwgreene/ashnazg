@@ -6,8 +6,8 @@ import ashnazg
 import colorama
 import logging
 
-def exploit(options, args):
-    nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, options=args)
+def exploit(options, vuln_args):
+    nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, vuln_args=vuln_args)
 
     # find a vulnerable function
     vulns = list(nazg.find_vulnerable_functions())
@@ -60,7 +60,7 @@ def main():
     angr_logger = logging.getLogger('angr')
     angr_logger.setLevel(logging.CRITICAL)
 
-    args = parse_vuln_args(options)
+    vuln_args = parse_vuln_args(options)
 
     if options.verbose:
         logging.getLogger("ashnazg").setLevel("DEBUG")
@@ -80,11 +80,11 @@ def main():
         parser.print_help()
         return
     if options.detect:
-        nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, options=args)
+        nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, options=vuln_args)
         for vuln in nazg.find_vulnerable_functions():
             print(vuln)
     else:
-        exploit(options)
+        exploit(options, vuln_args)
 
 if __name__=="__main__":
     main()

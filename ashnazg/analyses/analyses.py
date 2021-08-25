@@ -68,7 +68,9 @@ class StackBufferOverflowVulnerability(Vulnerability):
             "libc": str(self.libc),
             "targetFunc": str(self.targetFunc),
             "stackOffset": str(self.stackOffset),
-            "suffix": str(self.suffix)
+            "options": {
+                "sbo.suffix": str(self.suffix)
+            }
         }
         return json.dumps(fields, indent=2)
 
@@ -88,6 +90,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 stackOffset = arg["stackOffset"]
                 # TODO: automatically determine "suffix"
                 suffix = options.get("sbo.suffix", None)
+                suffix = suffix.replace("\\n", "\n")
                 return StackBufferOverflowVulnerability(function,
                     context.binary,
                     context.libc,

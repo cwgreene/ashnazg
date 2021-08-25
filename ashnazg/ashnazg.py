@@ -34,14 +34,17 @@ class Context:
         self.libc = libc
 
 class Ashnazg:
-    def __init__(self, binary : str, libc : str = None, options : dict = None):
+    def __init__(self, binary : str, libc : str = None, vuln_args : dict = None):
         if libc == None:
             libc = DEFAULT_LIBC
+        if vuln_args == None:
+            vuln_args = {}
         self.binaryname = binary
         self.binary_elf = pwn.ELF(binary)
         self.libc_elf = pwn.ELF(libc)
         self.project = angr.Project(binary, auto_load_libs=False)
         self.db = BinaryDb()
+        self.vuln_args = vuln_args
 
     def find_vulnerable_functions(self):
         # check function database
@@ -55,19 +58,23 @@ class Ashnazg:
             self.db.save()
         vulns = []  
         # analyze functions for call
-        for function in program["functions"]:
-            for vuln in analyses.ANALYSES:
-                ashnazg_log.info(f"Analyzing {vuln.name}")
-                result = vuln.detect(Context(self.binary_elf, self.libc_elf), function, program['functions'])
+        for vuln in analyses.ANALYSES:
+            ashnazg_log.info(f"Analyzing {vuln.name}")
+            for function in program["functions"]:
+                ashnazg_log.info(f"  Analyzing {vuln.name}:{function['name']}")
+                result = vuln.detect(Context(self.binary_elf, self.libc_elf), function, program['functions'], self.vuln_args)
                 if result:
+                    ashnazg_log.info(f"  FOUND vulnerable function {function['name']}")
                     vulns.append(result)
         return vulns
 
 
     def connect(self, remote=None, debug=False):
         if remote:
+            ashnazg_log.info("Connecting to {remote}")
             self.connection = Connection(self, remote=remote) 
         else:
+            ashnazg_log.info("Connecting to program '{self.binaryname}'")
             self.connection = Connection(self, binary=self.binaryname, debug=debug) 
         return self.connection
 
