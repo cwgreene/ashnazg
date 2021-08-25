@@ -15,13 +15,16 @@ import ashnazg.analyses as analyses
 pwnlog = logging.getLogger('pwnlib')
 pwnlog.setLevel('ERROR')
 
+ashnazg_log = logging.getLogger('ashnazg')
+
 # TODO: Look this up using something less system specific
 DEFAULT_LIBC="/lib/x86_64-linux-gnu/libc.so.6"
 
 def call_dorat(binaryname):
     result = {}
-    
-    proc = subprocess.run(["dorat", "--binary", binaryname, '--script', 'FunctionCalls.java'], stdout=subprocess.PIPE)
+    dorat = ["dorat", "--binary", binaryname, '--script', 'FunctionCalls.java']
+    ashnazg_log.info(f"Invoking Dorat: {dorat}")
+    proc = subprocess.run(dorat, stdout=subprocess.PIPE)
     stdout = str(proc.stdout, "utf8")
     return json.loads(stdout)
 
@@ -43,8 +46,10 @@ class Ashnazg:
     def find_vulnerable_functions(self):
         # check function database
         if self.db.check(self.binaryname, 'dorat'):
+            ashnazg_log.info(f"Found entry for '{self.binaryname}' in BinaryDb")
             program = self.db.get(self.binaryname, "dorat")
         else:
+            ashnazg_log.info(f"No entry for '{self.binaryname}' in BinaryDb, invoking dorat to generate")
             program = call_dorat(self.binaryname)
             self.db.add(self.binaryname, 'dorat', program)
             self.db.save()
@@ -52,6 +57,7 @@ class Ashnazg:
         # analyze functions for call
         for function in program["functions"]:
             for vuln in analyses.ANALYSES:
+                ashnazg_log.info(f"Analyzing {vuln.name}")
                 result = vuln.detect(Context(self.binary_elf, self.libc_elf), function, program['functions'])
                 if result:
                     vulns.append(result)

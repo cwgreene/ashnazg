@@ -42,9 +42,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--binary", required=True)
     parser.add_argument("--libc")
+    # TODO: `suffix` is a huge hack. should come
+    # up with a generic way of passing exploit specific arguments
     parser.add_argument("--suffix")
     parser.add_argument("--remote")
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--detect", action="store_true")
     options = parser.parse_args()
 
     angr_logger = logging.getLogger('angr')
@@ -52,7 +55,12 @@ def main():
 
     if options.verbose:
         logging.getLogger("ashnazg").setLevel("DEBUG")
-    exploit(options)
+    if options.detect:
+        nazg = ashnazg.Ashnazg(options.binary, libc=options.libc)
+        for vuln in nazg.find_vulnerable_functions():
+            print(vuln)
+    else:
+        exploit(options)
 
 if __name__=="__main__":
     main()

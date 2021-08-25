@@ -1,5 +1,6 @@
 import smrop
 import logging
+import json
 
 import pwn
 
@@ -14,6 +15,7 @@ def register(clazz):
     return clazz
 
 class Vulnerability:
+
     @staticmethod
     def detect(context, function, program):
         raise NotImplementedError()
@@ -41,6 +43,8 @@ def getLocal(name, function):
 @register
 class StackBufferOverflowVulnerability(Vulnerability):
 
+    name = "StackBufferOverflowVulnerability"
+
     def __init__(self,
             function,
             binary : pwn.ELF,
@@ -54,6 +58,18 @@ class StackBufferOverflowVulnerability(Vulnerability):
         self.targetFunc = targetFunc
         self.stackOffset = stackOffset
         self.suffix = suffix
+    
+    def __str__(self):
+        fields = {
+            "vulnerability": "StackBufferOverflowVulnerability",
+            "function": str(self.function["name"]),
+            "binary": str(self.binary),
+            "libc": str(self.libc),
+            "targetFunc": str(self.targetFunc),
+            "stackOffset": str(self.stackOffset),
+            "suffix": str(self.suffix)
+        }
+        return json.dumps(fields, indent=2)
 
     @staticmethod
     def detect(context, function, program):
