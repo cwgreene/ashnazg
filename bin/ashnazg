@@ -6,6 +6,8 @@ import ashnazg
 import colorama
 import logging
 
+ashnazg_log = logging.getLogger('ashnazg')
+
 def exploit(options, vuln_args):
     nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, vuln_args=vuln_args)
 
@@ -14,7 +16,9 @@ def exploit(options, vuln_args):
     if not vulns:
         print("No vulnerable functions found!")
         return
+    ashnazg_log.info(f"Found {len(vulns)} vulnerabilities.")
     vuln = vulns[0]
+    ashnazg_log.info(f"Exploiting {vuln.name}")
 
     # begin exploit
     remote = None

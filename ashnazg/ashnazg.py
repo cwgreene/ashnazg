@@ -71,10 +71,10 @@ class Ashnazg:
 
     def connect(self, remote=None, debug=False):
         if remote:
-            ashnazg_log.info("Connecting to {remote}")
+            ashnazg_log.info(f"Connecting to {remote}")
             self.connection = Connection(self, remote=remote) 
         else:
-            ashnazg_log.info("Connecting to program '{self.binaryname}'")
+            ashnazg_log.info(f"Connecting to program '{self.binaryname}'")
             self.connection = Connection(self, binary=self.binaryname, debug=debug) 
         return self.connection
 
@@ -113,15 +113,19 @@ class Connection:
             self.conn = pwn.remote(*remote)
 
     def navigate(self, function_addr):
+        ashnazg_log.info(f"Navigating program to {hex(function_addr)}")
         # find inputs to navigate to target function
+        ashnazg_log.info(f"Simulating program locally")
         self.simgr.explore(find=function_addr)
         if not self.simgr.found:
             raise Exception("Could not find path to '{}'".format(hex(function_addr)))
         found_state = self.simgr.found[0]
         found_input = found_state.posix.dumps(0)
+        ashnazg_log.info(f"Sending initial input to target: {found_input}")
         self.conn.send(found_input)
         expected_output = found_state.posix.dumps(1)
         if expected_output:
+            ashnazg_log.info(f"Capturing expected value: {expected_output}")
             self.transcription += self.conn.recv(len(expected_output))
 
     def exploit(self, vuln, assume=None):
