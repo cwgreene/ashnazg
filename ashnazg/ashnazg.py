@@ -37,15 +37,15 @@ class Model:
     def __init__(self, simgr):
         self.stdout_pos = 0
         self.stdin_pos = 0
-        self.state = None
+        self.state = simgr.active[0]
         self.simgr = simgr
 
-    def explore(find):
+    def explore_to(self, find):
         self.simgr.explore(find)
         # Check if we found anything
         # TODO: throw a more appropriate exception
-        if not self.model.found:
-            raise Exception("Could not find path to '{}'".format(hex(function_addr)))
+        if not self.simgr.found:
+            raise Exception("Could not find path to '{}' from '{}'".format(hex(find), self.state))
         self.state = self.model.found[0]
 
         # set us up for the future
@@ -143,11 +143,11 @@ class Connection:
             raise TypeError("{}: either 'binary' or 'remote' must be specified"
                 .format(self.__name__))
         # setup simulation manager
-        entry_state = nazg.model.factory.entry_state()
+        entry_state = nazg.angr_project.factory.entry_state()
         entry_state.options.add(angr.options.UNICORN)
         entry_state.options.add(angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY)
         
-        self.model : angr.SimulationManager = nazg.angr_project.factory.simulation_manager(entry_state)
+        self.model = Model(nazg.angr_project.factory.simulation_manager(entry_state))
 
         self.nazg = nazg
         self.transcription = b""
@@ -161,31 +161,19 @@ class Connection:
             self.conn = pwn.remote(*remote)
 
     def navigate(self, function_addr):
+        ashnazg_log.info(f"{function_addr},{type(function_addr)}")
         ashnazg_log.info(f"Navigating program to {hex(function_addr)}")
         # find inputs to navigate to target function
         ashnazg_log.info(f"Simulating program locally to determine navigation input.")
 
         # proposed change
-        # self.model.explore_to(find=function_addr) # raises exception if it can't find the target state
-        # target_output = self.model.get_output() # lets model know how much we've used
-        # target_input = self.model.get_input() # consumes input
-        self.model.explore(find=function_addr)
-
-        # Check if we found anything
-        # TODO: throw a more appropriate exception
-        if not self.model.found:
-            raise Exception("Could not find path to '{}'".format(hex(function_addr)))
-        
-        # select a found state
-        found_state = self.model.found[0]
-        found_input = found_state.posix.dumps(0)
+        self.model.explore_to(find=function_addr) # raises exception if it can't find the target state
+        expected_output = self.model.get_output() # lets model know how much we've used
+        found_input = self.model.get_input() # consumes input
 
         # Send the concretized input to the target
         ashnazg_log.info(f"Sending navigation input to target: {found_input}")
         self.conn.send(found_input)
-        # TODO: I think we need to track where in the input stream we are
-        # so we can re-enter navigate.
-        expected_output = found_state.posix.dumps(1)
         
         # If there is any expected output (to get here in the first place), recieve it.
         # TODO: This won't work if the expected output is variable in length.

