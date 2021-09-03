@@ -41,7 +41,7 @@ class Model:
         self.simgr = simgr
 
     def explore_to(self, find):
-        self.simgr.explore(find)
+        self.simgr.explore(find=find)
         # Check if we found anything
         # TODO: throw a more appropriate exception
         if not self.simgr.found:
@@ -80,6 +80,9 @@ class Model:
         if type(s) == str:
             s = bytes(s, 'utf8')
         self.send(s+b"\n")
+    
+    def get_state(self):
+        return self.state
 
 class Ashnazg:
     def __init__(self, binary : str, libc : str = None, vuln_args : dict = None):
@@ -162,7 +165,7 @@ class Connection:
 
     def navigate(self, function_addr):
         ashnazg_log.info(f"{function_addr},{type(function_addr)}")
-        ashnazg_log.info(f"Navigating program to {hex(function_addr)}")
+        ashnazg_log.info(f"Navigating program to {hex(function_addr)} from {self.model.get_state()}")
         # find inputs to navigate to target function
         ashnazg_log.info(f"Simulating program locally to determine navigation input.")
 
