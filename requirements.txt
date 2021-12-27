@@ -1,2 +1,2 @@
-smrop @ git+git://git@github.com/cwgreene/smrop.git
-dorat @ git+git://git@github.com/cwgreene/dorat.git
+git+https://github.com/cwgreene/smrop#egg=smrop
+git+https://github.com/cwgreene/dorat#egg=dorat
