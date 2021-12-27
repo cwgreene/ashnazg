@@ -6,6 +6,8 @@ setup(
    description='And in the darkness bind them',
    author_email='archgoon+ashnazg@gmail.com',
    packages=['ashnazg', 'ashnazg.analyses'],  #same as name
-   install_requires=[], #external packages as dependencies
+   install_requires=[
+        "git+https://github.com/cwgreene/dorat.git",
+        "git+https://github.com/cwgreene/smrop.git"],
    scripts=["bin/ashnazg"]
 )
