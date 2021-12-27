@@ -1,0 +1,2 @@
+smrop @ git+git://git@github.com/cwgreene/smrop.git
+dorat @ git+git://git@github.com/cwgreene/dorat.git
