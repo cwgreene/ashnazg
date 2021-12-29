@@ -212,7 +212,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # we have exited the function, we can now
         # write /bin/sh to a controlled part of memory
         logger.info(f"Writing '/bin/sh' to {hex(target_heap_address)}")
-        sconn.sendline("/bin/sh\x00")
+        sconn.sendline(b"/bin/sh\x00")
 
         # need to navigate back to the targetFunc
         if self.initial:
