@@ -201,5 +201,8 @@ class Connection:
     def recv(self):
         return self.conn.recv()
 
+    def recvuntil(self, bs):
+        return self.conn.recvuntil(bs)
+
     def interactive(self):
         self.conn.interactive()

@@ -73,7 +73,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
             "targetFunc": str(self.targetFunc),
             "stackOffset": str(self.stackOffset),
             "options": {
-                "sbo.suffix": str(self.suffix)
+                "sbo.suffix": str(self.suffix),
+                "sbo.initial": str(self.initial)
             }
         }
         return json.dumps(fields, indent=2)
@@ -97,6 +98,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 initial = options.get("sbo.initial", None)
                 if suffix:
                     suffix = suffix.replace("\\n", "\n")
+                initial = options.get("sbo.initial", None)
                 if initial:
                     initial = initial.replace("\\n", "\n")
 
@@ -159,7 +161,6 @@ class StackBufferOverflowVulnerability(Vulnerability):
         else:
             logger.info("Navigating to invocation of target input function.")
             conn.navigate(target_func)
-
 
         # read libc location
         logger.info("Sending first payload (to leak 'gets' location)")
