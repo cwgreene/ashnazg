@@ -46,7 +46,7 @@ class Model:
         # TODO: throw a more appropriate exception
         if not self.simgr.found:
             raise Exception("Could not find path to '{}' from '{}'".format(hex(find), self.state))
-        self.state = self.model.found[0]
+        self.state = self.simgr.found[0]
 
         # set us up for the future
         self.simgr.active.clear()
@@ -66,7 +66,7 @@ class Model:
         # TODO: validate that dumps actually collapses the input
         # otherwise we could mutate as the state evolves further.
         stdin = self.state.posix.dumps(0)
-        result = stdout[self.stdin_pos:]
+        result = stdin[self.stdin_pos:]
         self.stdin_pos = len(result)
         return result
     
@@ -74,7 +74,7 @@ class Model:
         if type(s) == str:
             s = bytes(s, 'utf8')
         self.stdin_pos += len(s) # we're assuming we're at the end... possibly bad assumption
-        self.state.stdin.content.append(s)
+        self.state.posix.stdin.content.append(s)
 
     def sendline(self, s):
         if type(s) == str:
@@ -175,15 +175,22 @@ class Connection:
         found_input = self.model.get_input() # consumes input
 
         # Send the concretized input to the target
-        ashnazg_log.info(f"Sending navigation input to target: {found_input}")
-        self.conn.send(found_input)
+        if found_input:
+            ashnazg_log.info(f"Sending navigation input to target: {found_input}")
+            self.conn.send(found_input)
         
         # If there is any expected output (to get here in the first place), recieve it.
         # TODO: This won't work if the expected output is variable in length.
         # TODO: We need to update the model to mark where in stdout we are.
         if expected_output:
-            ashnazg_log.info(f"Capturing expected output: {expected_output}")
-            self.transcription += self.conn.recv(len(expected_output))
+            ashnazg_log.info(f"Capturing expected output: {expected_output}",)
+            result = self.conn.recv(len(expected_output), timeout=5) # TODO: make timeout runtime param
+            if result != expected_output:
+                ashnazg_log.error(f"Failed to get expected output!")
+                actual = self.conn.recv()
+                raise Exception("Failed to get expected output, got {actual} instead")
+            ashnazg_log.info(f"Got expected output {result}")    
+            self.transcription += result
 
     def exploit(self, vuln, assume=None):
         vuln.exploit(self)
