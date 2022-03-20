@@ -41,11 +41,12 @@ class Model:
         self.simgr = simgr
 
     def explore_to(self, find):
+        states = str(self.simgr.active)
         self.simgr.explore(find=find)
         # Check if we found anything
         # TODO: throw a more appropriate exception
         if not self.simgr.found:
-            raise Exception("Could not find path to '{}' from '{}'".format(hex(find), self.state))
+            raise Exception("Could not find path to '{}' from '{}'".format(hex(find), states))
         self.state = self.simgr.found[0]
 
         # set us up for the future
@@ -176,8 +177,10 @@ class Connection:
 
         # Send the concretized input to the target
         if found_input:
-            ashnazg_log.info(f"Sending navigation input to target: {found_input}")
-            self.conn.send(found_input)
+            ashnazg_log.info(f"Sending navigation input to target: {found_input} to reach {hex(function_addr)}")
+            self.model.send(found_input)
+        else:
+            ashnazg_log.info(f"No input needed to reach: {hex(function_addr)}")
         
         # If there is any expected output (to get here in the first place), recieve it.
         # TODO: This won't work if the expected output is variable in length.
@@ -191,6 +194,8 @@ class Connection:
                 raise Exception("Failed to get expected output, got {actual} instead")
             ashnazg_log.info(f"Got expected output {result}")    
             self.transcription += result
+        else:
+            ashnazg_log.info(f"No output needed to be processed to reach {hex(function_addr)}")
 
     def exploit(self, vuln, assume=None):
         vuln.exploit(self)

