@@ -35,10 +35,14 @@ def test_can_exploit_buffer_overflow():
     # it here.
     conn.exploit(vuln)
 
-    # clear up any output prior to shell
-    _ = conn.recv()
-
-    conn.send(b"echo hello world\n")
-    text = conn.recvuntil(b"hello world\n")
+    # So there's a race condition here: when we send input
+    # it may go to the nocanary pie process, or it may get
+    # passed to the child process [TODO: understand how this works]
+    # I think a better option than pausing here is to obtain
+    # the process id and wait for it to spawn a subprocess, and
+    # *then* send the input.
+    for i in range(2):
+        conn.send(b"echo hello world\n")
+        text = conn.recvuntil(b"hello world\n", timeout=.5)
 
     nose.tools.ok_(b"hello world\n" in text, "Failed to execute echo command!")

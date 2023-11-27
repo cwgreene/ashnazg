@@ -131,14 +131,14 @@ class Connection:
     def exploit(self, vuln, assume=None):
         vuln.exploit(self)
 
-    def send(self, bs):
-        return self.conn.send(bs)
+    def send(self, *args, **kwargs):
+        return self.conn.send(*args, **kwargs)
 
-    def recv(self):
-        return self.conn.recv()
+    def recv(self, *args, **kwargs):
+        return self.conn.recv(*args, **kwargs)
 
-    def recvuntil(self, bs):
-        return self.conn.recvuntil(bs)
+    def recvuntil(self, *args, **kwargs):
+        return self.conn.recvuntil(*args, **kwargs)
 
     def interactive(self):
         self.conn.interactive()
