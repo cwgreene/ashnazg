@@ -129,7 +129,9 @@ class Connection:
         expected_output = found_state.posix.dumps(1)
         if expected_output:
             ashnazg_log.info(f"Capturing expected output: {expected_output}")
-            self.transcription += self.conn.recv(len(expected_output))
+            actual_output = self.conn.recv(len(expected_output))
+            self.transcription += actual_output
+            ashnazg_log.info(f"Captured: {actual_output}")
 
     def exploit(self, vuln, assume=None):
         vuln.exploit(self)

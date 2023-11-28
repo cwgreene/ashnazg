@@ -14,8 +14,8 @@ def test_can_detect_buffer_overflow():
     sb_types = [v for v in vulns if isinstance(v, StackBufferOverflowVulnerability) ]
     nose.tools.ok_(len(sb_types) >= 1, "Could not find a StackBufferOverflowVulnerability")
 
-def test_can_exploit_buffer_overflow():
-    nazg = ashnazg.Ashnazg("test_data/nocanarypie/nocanarypie")
+def exploitbuffer(program):
+    nazg = ashnazg.Ashnazg(program)
     vulns = nazg.find_vulnerable_functions()
     vuln = vulns[0]
 
@@ -46,3 +46,9 @@ def test_can_exploit_buffer_overflow():
         text = conn.recvuntil(b"hello world\n", timeout=.5)
 
     nose.tools.ok_(b"hello world\n" in text, "Failed to execute echo command!")
+
+def test_can_exploit_buffer_overflow():
+    exploitbuffer("test_data/nocanarypie/nocanarypie")
+
+def test_can_navigate_to_exploit():
+    exploitbuffer("test_data/nocanarypie/nocanarypie2")
