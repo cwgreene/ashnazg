@@ -121,8 +121,11 @@ class Connection:
             raise Exception("Could not find path to '{}'".format(hex(function_addr)))
         found_state = self.simgr.found[0]
         found_input = found_state.posix.dumps(0)
-        ashnazg_log.info(f"Sending navigation input to target: {found_input}")
-        self.conn.send(found_input)
+        if found_input != b"":
+            ashnazg_log.info(f"Sending navigation input to target: {found_input}")
+            self.conn.send(found_input)
+        else:
+            ashnazg_log.info(f"No navigation input needed")
         expected_output = found_state.posix.dumps(1)
         if expected_output:
             ashnazg_log.info(f"Capturing expected output: {expected_output}")
