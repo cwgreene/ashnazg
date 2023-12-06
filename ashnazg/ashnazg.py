@@ -159,8 +159,6 @@ class Connection:
         data += b"\n"
         stdin.content.append((claripy.BVV(data), len(data)))
         #stdin.pos += 1
-        ashnazg_log.info(stdin.content)
-        ashnazg_log.info(stdin.pos)
 
     def send(self, *args, **kwargs):
         self.sim_sendline(*args,**kwargs)
