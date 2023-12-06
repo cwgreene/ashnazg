@@ -4,16 +4,10 @@
 
 extern char *gets(char *s);
 
-void rop_me() {
-    __asm__ ("pop %rdi\n\t"
-             "ret\n\t");
-}
-
 void vulnfunction() {
     char local[8];
     puts("Oh my, this function is vulnerable");
-    gets(local);
-    puts("Can you handle extraneous output?");
+    read(0, local, 128);
 }
 
 int subfunction() {

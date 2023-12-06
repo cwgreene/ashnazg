@@ -6,5 +6,8 @@ nocanarypie: nocanarypie.c
 nocanarypie2: nocanarypie2.c
 	gcc -std=c99 -no-pie nocanarypie2.c -o nocanarypie2 -Wno-deprecated-declarations -fno-stack-protector
 
-nocanarypie2: nocanarypie3.c
+nocanarypie3: nocanarypie3.c
 	gcc -std=c99 -no-pie nocanarypie3.c -o nocanarypie3 -Wno-deprecated-declarations -fno-stack-protector
+
+nocanarypie4: nocanarypie3.c
+	gcc -std=c99 -no-pie nocanarypie3.c -o nocanarypie4 -Wno-deprecated-declarations -fno-stack-protector
