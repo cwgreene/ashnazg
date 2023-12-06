@@ -27,7 +27,7 @@ def exploitbuffer(program):
 
     # get the program to the vulnerable function
     # input.
-    conn.navigate(vuln.entry())
+    #conn.navigate(vuln.entry())
 
     # 'GETS' vulnerability can be applied immediately if
     # Binary is neither PIE nor canary. This is

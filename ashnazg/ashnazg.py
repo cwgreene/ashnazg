@@ -4,12 +4,16 @@ import subprocess
 import json
 
 import angr
+import claripy
 import pwn
 import smrop
 
 from smrop import BinaryDb
 
 import ashnazg.analyses as analyses
+
+# simprocedures
+import ashnazg.simprocedures as simprocedures
 
 # clean up logging for pwnlib
 pwnlog = logging.getLogger('pwnlib')
@@ -95,11 +99,13 @@ class Connection:
             raise TypeError("{}: either 'binary' or 'remote' must be specified"
                 .format(self.__name__))
         # setup simulation manager
+        nazg.project.hook_symbol('gets', simprocedures.gets())
         entry_state = nazg.project.factory.entry_state()
         entry_state.options.add(angr.options.UNICORN)
         entry_state.options.add(angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY)
         
         self.simgr : angr.SimulationManager = nazg.project.factory.simulation_manager(entry_state)
+        self.active_state = entry_state
 
         self.nazg = nazg
         self.transcription = b""
@@ -113,30 +119,51 @@ class Connection:
             self.conn = pwn.remote(*remote)
 
     def navigate(self, function_addr):
-        ashnazg_log.info(f"Navigating program to {hex(function_addr)}")
+        ashnazg_log.info(f"Navigating program to {hex(function_addr)} from {self.active_state}")
         # find inputs to navigate to target function
         ashnazg_log.info(f"Simulating program locally to determine navigation input.")
         self.simgr.explore(find=function_addr)
         if not self.simgr.found:
             raise Exception("Could not find path to '{}'".format(hex(function_addr)))
         found_state = self.simgr.found[0]
-        found_input = found_state.posix.dumps(0)
+        found_input = self.active_state.posix.dumps(0)
+        found_input = found_state.posix.dumps(0)[len(found_input):]
+        ashnazg_log.info(f"Position is at {found_state.posix.stdin.content} {found_state.posix.stdin.pos}")
         if found_input != b"":
             ashnazg_log.info(f"Sending navigation input to target: {found_input}")
             self.conn.send(found_input)
         else:
             ashnazg_log.info(f"No navigation input needed")
-        expected_output = found_state.posix.dumps(1)
+        current_output = self.active_state.posix.dumps(1)
+        expected_output = found_state.posix.dumps(1)[len(current_output):]
+
         if expected_output:
             ashnazg_log.info(f"Capturing expected output: {expected_output}")
             actual_output = self.conn.recv(len(expected_output))
             self.transcription += actual_output
             ashnazg_log.info(f"Captured: {actual_output}")
+        # Updater State
+        self.sim_set_state(found_state)
+        ashnazg_log.info(f"Updated state {self.simgr.active}")
+
+    def sim_set_state(self, state):
+        self.simgr = self.nazg.project.factory.simulation_manager(state)
+        self.active_state = state
 
     def exploit(self, vuln, assume=None):
         vuln.exploit(self)
 
+    def sim_sendline(self, data, *args, **kwargs):
+        ashnazg_log.info(f"Sending input '{data}' at {self.active_state}")
+        stdin = self.active_state.posix.stdin
+        data += b"\n"
+        stdin.content.append((claripy.BVV(data), len(data)))
+        #stdin.pos += 1
+        ashnazg_log.info(stdin.content)
+        ashnazg_log.info(stdin.pos)
+
     def send(self, *args, **kwargs):
+        self.sim_sendline(*args,**kwargs)
         return self.conn.send(*args, **kwargs)
 
     def recv(self, *args, **kwargs):

