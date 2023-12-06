@@ -192,7 +192,6 @@ class StackBufferOverflowVulnerability(Vulnerability):
         else:
             logger.info(f"Navigating to function exit {self.functionExit}")
             conn.navigate(int(self.functionExit,16))
-            # need to consume expected output prior to return.
 
         # We've hit the return, next output is now the 'gets' address
         gets_location = sconn.recvline()[:-1]
