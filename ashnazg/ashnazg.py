@@ -145,6 +145,29 @@ class Connection:
         # Updater State
         self.sim_set_state(found_state)
         ashnazg_log.info(f"Updated state {self.simgr.active}")
+    
+    # TODO:
+    # Is scout really necessary?
+    # can we just call navigate with the template?
+    def scout(self, function_addr, template_input):
+        current_input = self.active_state.posix.dumps(0)
+        ashnazg_log.info(f"Scouting program to {hex(function_addr)} from {self.active_state}")
+    
+        # clone current state and create simgr
+        scout_state = self.active_state.copy()
+        scout_state.posix.stdin.content += [claripy.Concat(*template_input)]
+        ashnazg_log.info(f"{scout_state.posix.stdin.content}")
+        simgr = self.nazg.project.factory.simulation_manager(scout_state)
+
+        # find inputs to navigate to target function
+        ashnazg_log.info(f"Simulating program locally to determine scout input.")
+        simgr.explore(find=function_addr)
+        if not simgr.found:
+            raise Exception("Could not scout path to '{}'".format(hex(function_addr)))
+        found_state = simgr.found[0]
+        found_input = found_state.posix.dumps(0)[len(current_input):]
+
+        return found_input
 
     def sim_set_state(self, state):
         self.simgr = self.nazg.project.factory.simulation_manager(state)

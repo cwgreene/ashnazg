@@ -55,3 +55,6 @@ def test_can_navigate_to_exploit():
 
 def test_can_navigate_out_of_exploit():
     exploitbuffer("test_data/nocanarypie/nocanarypie3")
+
+def test_can_handle_prefix():
+    exploitbuffer("test_data/nocanarypie/nocanarypie5")

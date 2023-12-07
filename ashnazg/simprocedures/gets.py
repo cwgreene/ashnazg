@@ -28,6 +28,7 @@ class gets(angr.SimProcedure):
             return 0
 
         max_size = self.state.libc.max_gets_size
+        max_size *= 2
 
         # case 0: the data is concrete. we should read it a byte at a time since we can't seek for
         # the newline and we don't have any notion of buffering in-memory
