@@ -33,7 +33,7 @@ def exploit(options, vuln_args):
     conn.navigate(vuln.entry())
 
     # 'GETS' vulnerability can be applied immediately if
-    # Binary is neither PIE nor canary. This is
+    # Binary is neither PIE nor canary. This will (in future) be
     # automatically detected, but we explicitly assume
     # it here.
     conn.exploit(vuln)
