@@ -38,6 +38,8 @@ int distraction(int a, int b) {
 }
 
 int main() {
+    setbuf(stdin,0);
+    setbuf(stdout,0);
     int x = distraction(3, 8);
     for(int i = 0; i < 10; i++) {
         printf("%d ", distraction(3, i));

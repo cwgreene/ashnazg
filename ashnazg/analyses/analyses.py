@@ -72,8 +72,6 @@ class StackBufferOverflowVulnerability(Vulnerability):
             # TODO: Make these more useful / general
             # TODO: Unify this with options above
             "options": {
-                "sbo.suffix": str(self.suffix),
-                "sbo.initial": str(self.initial)
             }
         }
         return json.dumps(fields, indent=2)
