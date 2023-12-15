@@ -1,2 +1,4 @@
 __pycache__
-BinaryDB.json
+BinaryDb.json
+build/
+dependencies/
