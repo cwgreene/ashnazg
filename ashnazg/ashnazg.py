@@ -38,7 +38,7 @@ class Context:
         self.libc = libc
 
 class Ashnazg:
-    def __init__(self, binary : str, libc : str = None, vuln_args : dict = None):
+    def __init__(self, binary : str, libc : str = None, vuln_args : dict = None, debug=False):
         if libc == None:
             libc = DEFAULT_LIBC
         if vuln_args == None:
@@ -49,8 +49,9 @@ class Ashnazg:
         self.project = angr.Project(binary, auto_load_libs=False)
         self.db = BinaryDb()
         self.vuln_args = vuln_args
+        self.debug = debug
 
-    def find_vulnerable_functions(self):
+    def find_vulnerable_functions(self, debug=False):
         # check function database
         if self.db.check(self.binaryname, 'dorat'):
             ashnazg_log.info(f"Found entry for '{self.binaryname}' in BinaryDb")
@@ -66,7 +67,11 @@ class Ashnazg:
             ashnazg_log.info(f"Analyzing {vuln.name}")
             for function in program["functions"]:
                 ashnazg_log.info(f"  Analyzing {vuln.name}:{function['name']}")
-                result = vuln.detect(Context(self.binary_elf, self.libc_elf), function, program['functions'], self.vuln_args)
+                result = vuln.detect(Context(self.binary_elf, self.libc_elf),
+                                     function,
+                                     program['functions'],
+                                     self.vuln_args,
+                                     debug=debug)
                 if result:
                     ashnazg_log.info(f"  FOUND vulnerable function {function['name']}")
                     vulns.append(result)
@@ -181,13 +186,11 @@ class Connection:
         stdin = self.active_state.posix.stdin
         data += b"\n"
         stdin.content.append((claripy.BVV(data), len(data)))
-        #stdin.pos += 1
     
     def sim_send(self, data, *args, **kwargs):
         ashnazg_log.info(f"Sending input '{data}' at {self.active_state}")
         stdin = self.active_state.posix.stdin
         stdin.content.append((claripy.BVV(data), len(data)))
-        #stdin.pos += 1
 
     def send(self, *args, **kwargs):
         self.sim_send(*args,**kwargs)

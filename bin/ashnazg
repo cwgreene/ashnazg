@@ -12,7 +12,7 @@ def exploit(options, vuln_args):
     nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, vuln_args=vuln_args)
 
     # find a vulnerable function
-    vulns = list(nazg.find_vulnerable_functions())
+    vulns = list(nazg.find_vulnerable_functions(debug=options.debug))
     if not vulns:
         print("No vulnerable functions found!")
         return
@@ -59,6 +59,7 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="increase log level")
     parser.add_argument("--detect", action="store_true", help="run detections, do not attempt exploit")
     parser.add_argument("--list", action="store_true", help="show possible vulnerabilities and options")
+    parser.add_argument("--debug", action="store_true", help="Step through vulnerabilities")
     options = parser.parse_args()
 
     angr_logger = logging.getLogger('angr')
@@ -84,8 +85,8 @@ def main():
         parser.print_help()
         return
     if options.detect:
-        nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, vuln_args=vuln_args)
-        for vuln in nazg.find_vulnerable_functions():
+        nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, vuln_args=vuln_args, debug=options.debug)
+        for vuln in nazg.find_vulnerable_functions(debug=options.debug):
             print(vuln)
     else:
         exploit(options, vuln_args)
