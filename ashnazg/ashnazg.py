@@ -182,9 +182,15 @@ class Connection:
         data += b"\n"
         stdin.content.append((claripy.BVV(data), len(data)))
         #stdin.pos += 1
+    
+    def sim_send(self, data, *args, **kwargs):
+        ashnazg_log.info(f"Sending input '{data}' at {self.active_state}")
+        stdin = self.active_state.posix.stdin
+        stdin.content.append((claripy.BVV(data), len(data)))
+        #stdin.pos += 1
 
     def send(self, *args, **kwargs):
-        self.sim_sendline(*args,**kwargs)
+        self.sim_send(*args,**kwargs)
         return self.conn.send(*args, **kwargs)
 
     def recv(self, *args, **kwargs):

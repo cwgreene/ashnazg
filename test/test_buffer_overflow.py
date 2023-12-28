@@ -7,12 +7,15 @@ ashnazg_log.setLevel("DEBUG")
 
 from ashnazg.analyses import StackBufferOverflowVulnerability
 
-def test_can_detect_buffer_overflow():
-    ash = ashnazg.Ashnazg("test_data/nocanarypie/nocanarypie")
+def check_buffer_overflow(binary):
+    ash = ashnazg.Ashnazg(binary)
     vulns = ash.find_vulnerable_functions()
-    nose.tools.ok_(len(vulns) >= 1, "No vulnerabilities found in nocanarypie!")
+    nose.tools.ok_(len(vulns) >= 1, f"No vulnerabilities found in {binary}!")
     sb_types = [v for v in vulns if isinstance(v, StackBufferOverflowVulnerability) ]
     nose.tools.ok_(len(sb_types) >= 1, "Could not find a StackBufferOverflowVulnerability")
+
+def test_can_detect_buffer_overflow_for_gets():
+    check_buffer_overflow("test_data/nocanarypie/nocanarypie")
 
 def exploitbuffer(program):
     nazg = ashnazg.Ashnazg(program)
@@ -58,3 +61,10 @@ def test_can_navigate_out_of_exploit():
 
 def test_can_handle_prefix():
     exploitbuffer("test_data/nocanarypie/nocanarypie5")
+
+def test_can_handle_read():
+    binary = "test_data/nocanarypie/nocanarypie4"
+    check_buffer_overflow(binary)
+    exploitbuffer(binary)
+
+

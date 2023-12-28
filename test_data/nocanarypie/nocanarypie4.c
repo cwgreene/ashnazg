@@ -4,6 +4,15 @@
 
 extern char *gets(char *s);
 
+void rop_me() {
+    __asm__ ("pop %rdi\n\t"
+             "ret\n\t");
+}
+
+void deprecated(char *buf) {
+    gets(buf);
+}
+
 void vulnfunction() {
     char local[8];
     puts("Oh my, this function is vulnerable");
