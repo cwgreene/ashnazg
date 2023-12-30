@@ -7,6 +7,12 @@ ashnazg_log.setLevel("DEBUG")
 
 from ashnazg.analyses import StackBufferOverflowVulnerability
 
+def check_no_buffer_overflow(binary):
+    ash = ashnazg.Ashnazg(binary)
+    vulns = ash.find_vulnerable_functions()
+    sb_types = [v for v in vulns if isinstance(v, StackBufferOverflowVulnerability) ]
+    nose.tools.ok_(len(sb_types) == 0, "Unexpected buffer Overflow found!")
+
 def check_buffer_overflow(binary):
     ash = ashnazg.Ashnazg(binary)
     vulns = ash.find_vulnerable_functions()
@@ -66,5 +72,10 @@ def test_can_handle_read():
     binary = "test_data/nocanarypie/nocanarypie4"
     check_buffer_overflow(binary)
     exploitbuffer(binary)
+
+def test_no_false_buffer_with_read():
+    # This binary has a 'read' call, but it's safe.
+    binary = "test_data/nocanarypie/nocanarypie6"
+    check_no_buffer_overflow(binary)
 
 
