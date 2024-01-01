@@ -27,3 +27,7 @@ nocanarypie6: nocanarypie6.c
 # fgets
 nocanarypie7: nocanarypie7.c
 	gcc -std=c99 -no-pie nocanarypie7.c -o nocanarypie7 -Wno-deprecated-declarations -fno-stack-protector
+
+# fread
+nocanarypie8: nocanarypie8.c
+	gcc -std=c99 -no-pie nocanarypie8.c -o nocanarypie8 -Wno-deprecated-declarations -fno-stack-protector

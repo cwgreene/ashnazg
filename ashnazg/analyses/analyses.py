@@ -156,6 +156,29 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     functionExit=function["exitAddresses"][0],
                     stackOffset=stackOffset,
                     debug=debug)
+    
+    @staticmethod
+    def bad_call_fread(call, context, function, program, options, debug=False): 
+        targetBuffer = call["arguments"][0]
+        source_file = call["arguments"][3]
+        
+        targetSize = None
+        # TODO: add analysis to ghidra to export type info
+        # here to figure out if it's a variable or a constant
+        try:
+            targetSize = int(call["arguments"][1], 16)*int(call["arguments"][2],16)
+        except:
+            return
+        if source_file == "stdin" and targetSize and isLocal(targetBuffer, function):
+            stackOffset = -getLocal(targetBuffer, function)["stackOffset"]
+            if targetSize > (stackOffset + StackBufferOverflowVulnerability.EXPLOIT_SIZE):
+                return StackBufferOverflowVulnerability(function,
+                    context.binary,
+                    context.libc,
+                    targetFunc=call,
+                    functionExit=function["exitAddresses"][0],
+                    stackOffset=stackOffset,
+                    debug=debug)
 
     @staticmethod
     def detect(context, function, program, options, debug=False):
@@ -165,10 +188,14 @@ class StackBufferOverflowVulnerability(Vulnerability):
             "fgets": StackBufferOverflowVulnerability.bad_call_fgets
         }
         for call in function["calls"]:
-            if call["funcName"] in bad_calls:
-                res = bad_calls[call["funcName"]](call, context, function, program, options, debug)
-                if res:
-                    return res
+            try:
+                if call["funcName"] in bad_calls:
+                    res = bad_calls[call["funcName"]](call, context, function, program, options, debug)
+                    if res:
+                        return res
+                    continue
+            except Exception as e:
+                logger.warning(f"Exception occurred while processing '{call['funcName']}': {e}")
                 continue
             
         return None
