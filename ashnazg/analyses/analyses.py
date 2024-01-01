@@ -89,59 +89,69 @@ class StackBufferOverflowVulnerability(Vulnerability):
         return [ELF.NO_CANARY, ELF.KNOWN_MAIN, ELF.KNOWN_POP_RDI, ELF.KNOWN_GOT]
 
     @staticmethod
-    def detect(context, function, program, options, debug=False):
-        for call in function["calls"]:
-            if call["funcName"] == "gets":
-                targetFunc = call
-                # assume stack for now
-                # need to add check to validate
-                # that the argument is on the stack.
-                # otherwise, this is not exploitable
-                # via this technique
-                # TODO: Add check
-                arg = call["arguments"][0]
-                arg = [v for v in function["variables"] if v["name"] == arg]
-                if len(arg) < 1:
-                    continue
-                arg = arg[0]
-                stackOffset = arg["stackOffset"]
+    def bad_call_gets(call, context, function, program, options, debug=False): 
+        targetFunc = call
+        # assume stack for now
+        # need to add check to validate
+        # that the argument is on the stack.
+        # otherwise, this is not exploitable
+        # via this technique
+        # TODO: Add check
+        arg = call["arguments"][0]
+        arg = [v for v in function["variables"] if v["name"] == arg]
+        if len(arg) < 1:
+            return
+        arg = arg[0]
+        stackOffset = arg["stackOffset"]
+        return StackBufferOverflowVulnerability(function,
+            context.binary,
+            context.libc,
+            targetFunc=targetFunc,
+            functionExit=function["exitAddresses"][0],
+            stackOffset=stackOffset,
+            debug=debug)
+
+    @staticmethod
+    def bad_call_read(call, context, function, program, options, debug=False): 
+        targetBuffer = call["arguments"][1]
+        source_fd = call["arguments"][0]
+        
+        targetSize = None
+        # TODO: add analysis to ghidra to export type info
+        # here to figure out if it's a variable or a constant
+        try:
+            targetSize = int(call["arguments"][2], 16)
+        except:
+            return
+        if source_fd == "0" and targetSize and isLocal(targetBuffer, function):
+            stackOffset = -getLocal(targetBuffer, function)["stackOffset"]
+            if targetSize > (stackOffset + StackBufferOverflowVulnerability.EXPLOIT_SIZE):
                 return StackBufferOverflowVulnerability(function,
                     context.binary,
                     context.libc,
-                    targetFunc=targetFunc,
+                    targetFunc=call,
                     functionExit=function["exitAddresses"][0],
                     stackOffset=stackOffset,
                     debug=debug)
-                    
-            # Work in progress apparently
-            # TODO: Get this working and tested
-            # consider blacklist of functions to allow skipping of problematic functions
-            # TODO: Update "exploit" to handle the lack of "gets"
-            #       Needs to check ropchain to handle additonal arguments
-            if call["funcName"] == "read":
-                targetBuffer = call["arguments"][1]
-                targetSize = None
-                # TODO: add analysis to ghidra to export type info
-                # here to figure out if it's a variable or a constant
-                try:
-                    targetSize = int(call["arguments"][2], 16)
-                except:
-                    pass
-                if targetSize and isLocal(targetBuffer, function):
-                    stackOffset = -getLocal(targetBuffer, function)["stackOffset"]
-                    if targetSize > (stackOffset + StackBufferOverflowVulnerability.EXPLOIT_SIZE):
-                        return StackBufferOverflowVulnerability(function,
-                            context.binary,
-                            context.libc,
-                            targetFunc=call,
-                            functionExit=function["exitAddresses"][0],
-                            stackOffset=stackOffset,
-                            debug=debug)
-                        self.targetFunc = call
-                        self.stackOffset = stackOffset
-                        return BufferOverflow
-                return None
+                self.targetFunc = call
+                self.stackOffset = stackOffset
+                return BufferOverflow
+
+    @staticmethod
+    def detect(context, function, program, options, debug=False):
+        bad_calls = {
+            "gets": StackBufferOverflowVulnerability.bad_call_gets,
+            "read": StackBufferOverflowVulnerability.bad_call_read
+        }
+        for call in function["calls"]:
+            if call["funcName"] in bad_calls:
+                res = bad_calls[call["funcName"]](call, context, function, program, options, debug)
+                if res:
+                    return res
+                continue
+            
         return None
+    # TODO: Get this working and tested
 
     def entry(self):
         return int(self.function["address"], 16)
