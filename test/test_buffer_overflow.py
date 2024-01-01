@@ -79,7 +79,7 @@ def test_can_handle_fgets():
     exploitbuffer(binary)
 
 def test_can_handle_fread():
-    binary = "test_data/nocanarypie/nocanarypie7"
+    binary = "test_data/nocanarypie/nocanarypie8"
     check_buffer_overflow(binary)
     exploitbuffer(binary)
 

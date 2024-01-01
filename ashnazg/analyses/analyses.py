@@ -185,7 +185,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
         bad_calls = {
             "gets": StackBufferOverflowVulnerability.bad_call_gets,
             "read": StackBufferOverflowVulnerability.bad_call_read,
-            "fgets": StackBufferOverflowVulnerability.bad_call_fgets
+            "fgets": StackBufferOverflowVulnerability.bad_call_fgets,
+            "fread": StackBufferOverflowVulnerability.bad_call_fread
         }
         for call in function["calls"]:
             try:

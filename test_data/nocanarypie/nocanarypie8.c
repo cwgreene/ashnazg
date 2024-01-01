@@ -16,7 +16,7 @@ void deprecated(char *buf) {
 void vulnfunction() {
     char local[8];
     puts("Oh my, this function is not vulnerable");
-    fread(local, 16, 4, stdin);
+    fread(local, 1, 128, stdin);
 }
 
 int subfunction() {
