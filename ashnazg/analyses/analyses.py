@@ -133,15 +133,36 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     functionExit=function["exitAddresses"][0],
                     stackOffset=stackOffset,
                     debug=debug)
-                self.targetFunc = call
-                self.stackOffset = stackOffset
-                return BufferOverflow
+    
+    @staticmethod
+    def bad_call_fgets(call, context, function, program, options, debug=False): 
+        targetBuffer = call["arguments"][0]
+        source_file = call["arguments"][2]
+        
+        targetSize = None
+        # TODO: add analysis to ghidra to export type info
+        # here to figure out if it's a variable or a constant
+        try:
+            targetSize = int(call["arguments"][1], 16)
+        except:
+            return
+        if source_file == "stdin" and targetSize and isLocal(targetBuffer, function):
+            stackOffset = -getLocal(targetBuffer, function)["stackOffset"]
+            if targetSize > (stackOffset + StackBufferOverflowVulnerability.EXPLOIT_SIZE):
+                return StackBufferOverflowVulnerability(function,
+                    context.binary,
+                    context.libc,
+                    targetFunc=call,
+                    functionExit=function["exitAddresses"][0],
+                    stackOffset=stackOffset,
+                    debug=debug)
 
     @staticmethod
     def detect(context, function, program, options, debug=False):
         bad_calls = {
             "gets": StackBufferOverflowVulnerability.bad_call_gets,
-            "read": StackBufferOverflowVulnerability.bad_call_read
+            "read": StackBufferOverflowVulnerability.bad_call_read,
+            "fgets": StackBufferOverflowVulnerability.bad_call_fgets
         }
         for call in function["calls"]:
             if call["funcName"] in bad_calls:
