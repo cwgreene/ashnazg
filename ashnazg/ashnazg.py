@@ -73,7 +73,7 @@ class Ashnazg:
                                      self.vuln_args,
                                      debug=debug)
                 if result:
-                    ashnazg_log.info(f"  FOUND vulnerable function {function['name']}")
+                    ashnazg_log.info(f"  FOUND vulnerable function {function['name']}: {str(result)}")
                     vulns.append(result)
         return vulns
 
@@ -105,6 +105,7 @@ class Connection:
                 .format(self.__name__))
         # setup simulation manager
         nazg.project.hook_symbol('gets', simprocedures.gets())
+        nazg.project.hook_symbol('fread', simprocedures.fread())
         entry_state = nazg.project.factory.entry_state()
         entry_state.options.add(angr.options.UNICORN)
         entry_state.options.add(angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY)
@@ -137,6 +138,8 @@ class Connection:
         if found_input != b"":
             ashnazg_log.info(f"Sending navigation input to target: {found_input}")
             self.conn.send(found_input)
+            if hasattr(self.conn, "stdin"):
+                self.conn.stdin.flush()
         else:
             ashnazg_log.info(f"No navigation input needed")
         current_output = self.active_state.posix.dumps(1)
@@ -182,19 +185,21 @@ class Connection:
         vuln.exploit(self)
 
     def sim_sendline(self, data, *args, **kwargs):
-        ashnazg_log.info(f"Sending input '{data}' at {self.active_state}")
+        ashnazg_log.info(f"Sending input '{data}' ({len(data)}) at {self.active_state}")
         stdin = self.active_state.posix.stdin
         data += b"\n"
         stdin.content.append((claripy.BVV(data), len(data)))
     
     def sim_send(self, data, *args, **kwargs):
-        ashnazg_log.info(f"Sending input '{data}' at {self.active_state}")
+        ashnazg_log.info(f"Sending input '{data}' ({len(data)}) at {self.active_state}")
         stdin = self.active_state.posix.stdin
         stdin.content.append((claripy.BVV(data), len(data)))
 
     def send(self, *args, **kwargs):
         self.sim_send(*args,**kwargs)
-        return self.conn.send(*args, **kwargs)
+        res = self.conn.send(*args, **kwargs)
+        if hasattr(self.conn, "stdin"):
+            self.conn.stdin.flush()
 
     def recv(self, *args, **kwargs):
         return self.conn.recv(*args, **kwargs)
