@@ -63,7 +63,7 @@ class Ashnazg:
             self.db.save()
         vulns = []  
         # analyze functions for call
-        for vuln in analyses.ANALYSES:
+        for vuln in analyses.toplevel():
             ashnazg_log.info(f"Analyzing {vuln.name}")
             for function in program["functions"]:
                 ashnazg_log.info(f"  Analyzing {vuln.name}:{function['name']}")
