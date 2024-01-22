@@ -1,2 +1,2 @@
 from .analyses import *
-from .stackbuffer import StackBufferOverflowVulnerability
+from .attacks.stackbuffer import StackBufferOverflowVulnerability

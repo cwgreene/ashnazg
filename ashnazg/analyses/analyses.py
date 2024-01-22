@@ -23,6 +23,9 @@ def partial(clazz):
 def toplevel():
     return ANALYSES_TOP
 
+def partials():
+    return ANALYSES_PARTIAL
+
 class Vulnerability:
 
     @staticmethod
