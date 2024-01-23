@@ -50,8 +50,8 @@ class Ashnazg:
         self.db = BinaryDb()
         self.vuln_args = vuln_args
         self.debug = debug
-
-    def find_vulnerable_functions(self, debug=False):
+    
+    def program(self):
         # check function database
         if self.db.check(self.binaryname, 'dorat'):
             ashnazg_log.info(f"Found entry for '{self.binaryname}' in BinaryDb")
@@ -61,31 +61,60 @@ class Ashnazg:
             program = call_dorat(self.binaryname)
             self.db.add(self.binaryname, 'dorat', program)
             self.db.save()
+        return program
+
+    def is_navigable(self, function):
+        # TODO: This check is expensive.
+        try:
+            conn = self.connect() 
+            conn.navigate(int(function["address"], 16)) 
+        except Exception as e:
+            return False
+        return True
+
+    def find_vulnerable_functions(self, debug=False):
+        program = self.program()
         vulns = []  
         # analyze functions for call
         for vuln in analyses.toplevel():
             ashnazg_log.info(f"Analyzing {vuln.name}")
             for function in program["functions"]:
-                ashnazg_log.info(f"  Analyzing {vuln.name}:{function['name']}")
-                result = vuln.detect(Context(self.binary_elf, self.libc_elf),
+                result = self.detect_vuln(vuln, function)
+                if result:
+                    if self.is_navigable(function):
+                        ashnazg_log.info(f"  FOUND vulnerable function {function['name']}: {str(result)}")
+                        vulns.append(result)
+                    else:
+                        ashnazg_log.info(f"  NON-NAVIGABLE vulnerable function {function['name']}: {str(result)}")
+        return vulns
+
+    def functions(self):
+        program = self.program()
+        return program["functions"]
+
+    def find_function(self, name):
+        for function in self.functions():
+            if function["name"] == name:
+                return function
+
+    def detect_vuln(self, vuln, function, debug=False):
+        program = self.program()
+        ashnazg_log.info(f"  Analyzing {vuln.name}:{function['name']}")
+        result = vuln.detect(Context(self.binary_elf, self.libc_elf),
                                      function,
                                      program['functions'],
                                      self.vuln_args,
                                      debug=debug)
-                if result:
-                    ashnazg_log.info(f"  FOUND vulnerable function {function['name']}: {str(result)}")
-                    vulns.append(result)
-        return vulns
-
+        return result
 
     def connect(self, remote=None, debug=False):
         if remote:
             ashnazg_log.info(f"Connecting to {remote}")
-            self.connection = Connection(self, remote=remote) 
+            connection = Connection(self, remote=remote) 
         else:
             ashnazg_log.info(f"Connecting to program '{self.binaryname}'")
-            self.connection = Connection(self, binary=self.binaryname, debug=debug) 
-        return self.connection
+            connection = Connection(self, binary=self.binaryname, debug=debug) 
+        return connection
 
     def lookup(self, function):
         if function in self.binary_elf.plt:
