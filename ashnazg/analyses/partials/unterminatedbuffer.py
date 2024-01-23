@@ -42,10 +42,13 @@ class UnterminatedBuffer(Vulnerability):
         return None
 
     def exploit(self, conn : Connection, targetValue : ConcreteValue):
+        self.write(conn, targetValue)
+    
+    def write(self, conn : Connection, targetValue : ConcreteValue):
         #TODO: detect if we're currently already in the function.
         if len(targetValue) > self.bufferSize:
             raise Exception(f"Requested Concrete Value '{targetValue}' has length {len(targetValue)} which execeeds {self.bufferSize}")
-        conn.navigate(self.function)
+        conn.navigate(self.function.address)
         conn.send(targetValue)
     
     def bufferSize(self):

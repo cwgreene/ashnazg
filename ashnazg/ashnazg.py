@@ -10,6 +10,7 @@ import smrop
 
 from smrop import BinaryDb
 from dorat.schema import DoratProgram, DoratFunction
+from .analyses import Vulnerability
 
 import ashnazg.analyses as analyses
 
@@ -98,7 +99,7 @@ class Ashnazg:
             if function.name == name:
                 return function
 
-    def detect_vuln(self, vuln, function, debug=False):
+    def detect_vuln(self, vuln, function, debug=False) -> Vulnerability:
         program = self.program()
         ashnazg_log.info(f"  Analyzing {vuln.name}:{function.name}")
         result = vuln.detect(Context(self.binary_elf, self.libc_elf),
@@ -134,8 +135,10 @@ class Connection:
             raise TypeError("{}: either 'binary' or 'remote' must be specified"
                 .format(self.__name__))
         # setup simulation manager
-        nazg.project.hook_symbol('gets', simprocedures.gets())
-        nazg.project.hook_symbol('fread', simprocedures.fread())
+        for symbol in ["gets", "fread"]:
+            if symbol in nazg.binary_elf.symbols:
+                nazg.project.hook_symbol('gets', simprocedures.gets())
+                nazg.project.hook_symbol('fread', simprocedures.fread())
         entry_state = nazg.project.factory.entry_state()
         entry_state.options.add(angr.options.UNICORN)
         entry_state.options.add(angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY)
