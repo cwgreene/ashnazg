@@ -4,6 +4,8 @@ import json
 import smrop
 import claripy
 
+from dorat.schema import DoratFunction, DoratCall 
+
 from ..analyses import Vulnerability, register
 from ..functions import isLocal, isParameter, getLocal
 
@@ -17,10 +19,10 @@ class StackBufferOverflowVulnerability(Vulnerability):
     EXPLOIT_SIZE = 0x20 #TODO: Compute this properly.
 
     def __init__(self,
-            function,
+            function : DoratFunction,
             binary : pwn.ELF,
             libc : pwn.ELF,
-            targetFunc,
+            targetFunc : DoratCall,
             functionExit,
             stackOffset,
             bufferFunction,
@@ -39,7 +41,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
     def __str__(self):
         fields = {
             "vulnerability": "StackBufferOverflowVulnerability",
-            "function": str(self.function["name"]),
+            "function": str(self.function.name),
             "binary": str(self.binary),
             "libc": str(self.libc),
             "targetFunc": str(self.targetFunc),
@@ -62,7 +64,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         return [ELF.NO_CANARY, ELF.KNOWN_MAIN, ELF.KNOWN_POP_RDI, ELF.KNOWN_GOT]
 
     @staticmethod
-    def bad_call_gets(call, context, function, program, options, debug=False): 
+    def bad_call_gets(call : DoratCall, context, function : DoratFunction, program, options, debug=False): 
         targetFunc = call
         # assume stack for now
         # need to add check to validate
@@ -70,124 +72,124 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # otherwise, this is not exploitable
         # via this technique
         # TODO: Add check
-        arg = call["arguments"][0]
-        arg = [v for v in function["variables"] if v["name"] == arg]
+        arg = call.arguments[0]
+        arg = [v for v in function.variables if v.name == arg]
         if len(arg) < 1:
             return
         arg = arg[0]
-        stackOffset = arg["stackOffset"]
+        stackOffset = arg.stackOffset
         return StackBufferOverflowVulnerability(function,
             context.binary,
             context.libc,
             targetFunc=targetFunc,
-            functionExit=function["exitAddresses"][0],
+            functionExit=function.exitAddresses[0],
             stackOffset=stackOffset,
             bufferFunction="gets",
             debug=debug)
 
     @staticmethod
-    def bad_call_read(call, context, function, program, options, debug=False): 
-        targetBuffer = call["arguments"][1]
-        source_fd = call["arguments"][0]
+    def bad_call_read(call : DoratCall, context, function : DoratFunction, program, options, debug=False): 
+        targetBuffer = call.arguments[1]
+        source_fd = call.arguments[0]
         
         targetSize = None
         # TODO: add analysis to ghidra to export type info
         # here to figure out if it's a variable or a constant
         try:
-            targetSize = int(call["arguments"][2], 16)
+            targetSize = int(call.arguments[2], 16)
         except:
             return
         if source_fd == "0" and targetSize and isLocal(targetBuffer, function):
-            stackOffset = -getLocal(targetBuffer, function)["stackOffset"]
+            stackOffset = -getLocal(targetBuffer, function).stackOffset
             if targetSize > (stackOffset + StackBufferOverflowVulnerability.EXPLOIT_SIZE):
                 return StackBufferOverflowVulnerability(function,
                     context.binary,
                     context.libc,
                     targetFunc=call,
-                    functionExit=function["exitAddresses"][0],
+                    functionExit=function.exitAddresses[0],
                     stackOffset=stackOffset,
                     bufferFunction="read",
                     debug=debug)
     
     @staticmethod
-    def bad_call_fgets(call, context, function, program, options, debug=False): 
-        targetBuffer = call["arguments"][0]
-        source_file = call["arguments"][2]
+    def bad_call_fgets(call : DoratCall, context, function : DoratFunction, program, options, debug=False): 
+        targetBuffer = call.arguments[0]
+        source_file = call.arguments[2]
         
         targetSize = None
         # TODO: add analysis to ghidra to export type info
         # here to figure out if it's a variable or a constant
         try:
-            targetSize = int(call["arguments"][1], 16)
+            targetSize = int(call.arguments[1], 16)
         except:
             return
         if source_file == "stdin" and targetSize and isLocal(targetBuffer, function):
-            stackOffset = -getLocal(targetBuffer, function)["stackOffset"]
+            stackOffset = -getLocal(targetBuffer, function).stackOffset
             if targetSize > (stackOffset + StackBufferOverflowVulnerability.EXPLOIT_SIZE):
                 return StackBufferOverflowVulnerability(function,
                     context.binary,
                     context.libc,
                     targetFunc=call,
-                    functionExit=function["exitAddresses"][0],
+                    functionExit=function.exitAddresses[0],
                     stackOffset=stackOffset,
                     bufferFunction="fgets",
                     debug=debug)
     
     @staticmethod
-    def bad_call_fread(call, context, function, program, options, debug=False): 
-        targetBuffer = call["arguments"][0]
-        source_file = call["arguments"][3]
+    def bad_call_fread(call : DoratCall, context, function : DoratFunction, program, options, debug=False): 
+        targetBuffer = call.arguments[0]
+        source_file = call.arguments[3]
         
         targetSize = None
         # TODO: add analysis to ghidra to export type info
         # here to figure out if it's a variable or a constant
         try:
-            targetSize = int(call["arguments"][1], 16)*int(call["arguments"][2],16)
+            targetSize = int(call.arguments[1], 16)*int(call.arguments[2],16)
         except:
             return
         if source_file == "stdin" and targetSize and isLocal(targetBuffer, function):
-            stackOffset = -getLocal(targetBuffer, function)["stackOffset"]
+            stackOffset = -getLocal(targetBuffer, function).stackOffset
             if targetSize > (stackOffset + StackBufferOverflowVulnerability.EXPLOIT_SIZE):
                 return StackBufferOverflowVulnerability(function,
                     context.binary,
                     context.libc,
                     targetFunc=call,
-                    functionExit=function["exitAddresses"][0],
+                    functionExit=function.exitAddresses[0],
                     stackOffset=stackOffset,
                     bufferFunction="fread",
                     bufferSize=targetSize,
                     debug=debug)
 
     @staticmethod
-    def detect(context, function, program, options, debug=False):
+    def detect(context, function : DoratFunction, program, options, debug=False):
         bad_calls = {
             "gets": StackBufferOverflowVulnerability.bad_call_gets,
             "read": StackBufferOverflowVulnerability.bad_call_read,
             "fgets": StackBufferOverflowVulnerability.bad_call_fgets,
             "fread": StackBufferOverflowVulnerability.bad_call_fread
         }
-        for call in function["calls"]:
+        for call in function.calls:
             try:
-                if call["funcName"] in bad_calls:
-                    res = bad_calls[call["funcName"]](call, context, function, program, options, debug)
+                if call.funcName in bad_calls:
+                    res = bad_calls[call.funcName](call, context, function, program, options, debug)
                     if res:
                         return res
                     continue
             except Exception as e:
-                logger.warning(f"Exception occurred while processing '{call['funcName']}': {e}")
+                logger.warning(f"Exception occurred while processing '{call.funcName}': {e}")
                 continue
             
         return None
     # TODO: Get this working and tested
 
     def entry(self):
-        return int(self.function["address"], 16)
+        return self.function.address
 
     # TODO: gate on detect
     def exploit(self, conn):
         sconn = conn.conn
-        function_addr = int(self.function["address"], 16) 
-        functionExit = int(self.functionExit, 16)
+        function_addr = self.function.address
+        functionExit = self.functionExit
     
         logger.info("#####")
         logger.info("# STACK BUFFER OVERFLOW - STAGE 1: Leak Libc")
@@ -195,7 +197,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         # Navigate to targetFunc
         logger.info("Navigating to targetFunc.")
-        conn.navigate(int(self.targetFunc["address"],16))
+        conn.navigate(self.targetFunc.address)
         self.dpause(conn)
 
         # Payload1: leak libc location
@@ -241,7 +243,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         # need to navigate back to the targetFunc
         logger.info("Navigating to targetFunc.")
-        conn.navigate(int(self.targetFunc["address"],16))
+        conn.navigate(self.targetFunc.address)
         self.dpause(conn)
 
         logger.info("#####")
@@ -283,7 +285,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
 
         # need to navigate back to the targetFunc
         logger.info("Navigating to targetFunc.")
-        conn.navigate(int(self.targetFunc["address"],16))
+        conn.navigate(self.targetFunc.address)
         self.dpause(conn)
 
         logger.info("#####")

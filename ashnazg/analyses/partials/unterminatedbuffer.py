@@ -4,6 +4,8 @@ from ..functions import isLocal, isParameter, getLocal
 from ..types import ConcreteValue
 from ashnazg import Connection
 
+from dorat.schema import DoratFunction
+
 import logging
 
 logger = logging.getLogger(name=__name__)
@@ -14,18 +16,18 @@ logger = logging.getLogger(name=__name__)
 class UnterminatedBuffer(Vulnerability):
     name="UnterminatedBuffer"
 
-    def __init__(self, function, buffer : str, bufferSize : int):
+    def __init__(self, function : DoratFunction, buffer : str, bufferSize : int):
         self.function = function
         self.buffer = buffer
         self.bufferSize = bufferSize
     
     @staticmethod
-    def detect(context, function, program, options, debug=False):
-        for call in function["calls"]:
+    def detect(context, function : DoratFunction, program, options, debug=False):
+        for call in function.calls:
             try:
                 print(call)
-                if call["funcName"] in ["read"]:
-                    args = call["arguments"]
+                if call.funcName in ["read"]:
+                    args = call.arguments
                     print(args)
                     # TODO: buffer doesn't need to be local
                     if args[0] == "0" and isLocal(args[1], function):

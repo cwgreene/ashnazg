@@ -9,6 +9,7 @@ import pwn
 import smrop
 
 from smrop import BinaryDb
+from dorat.schema import DoratProgram, DoratFunction
 
 import ashnazg.analyses as analyses
 
@@ -61,13 +62,13 @@ class Ashnazg:
             program = call_dorat(self.binaryname)
             self.db.add(self.binaryname, 'dorat', program)
             self.db.save()
-        return program
+        return DoratProgram(program)
 
-    def is_navigable(self, function):
+    def is_navigable(self, function: DoratFunction):
         # TODO: This check is expensive.
         try:
             conn = self.connect() 
-            conn.navigate(int(function["address"], 16)) 
+            conn.navigate(function.address) 
         except Exception as e:
             return False
         return True
@@ -78,31 +79,31 @@ class Ashnazg:
         # analyze functions for call
         for vuln in analyses.toplevel():
             ashnazg_log.info(f"Analyzing {vuln.name}")
-            for function in program["functions"]:
+            for function in program.functions:
                 result = self.detect_vuln(vuln, function)
                 if result:
                     if self.is_navigable(function):
-                        ashnazg_log.info(f"  FOUND vulnerable function {function['name']}: {str(result)}")
+                        ashnazg_log.info(f"  FOUND vulnerable function {function.name}: {str(result)}")
                         vulns.append(result)
                     else:
-                        ashnazg_log.info(f"  NON-NAVIGABLE vulnerable function {function['name']}: {str(result)}")
+                        ashnazg_log.info(f"  NON-NAVIGABLE vulnerable function {function.name}: {str(result)}")
         return vulns
 
     def functions(self):
         program = self.program()
-        return program["functions"]
+        return program.functions
 
     def find_function(self, name):
         for function in self.functions():
-            if function["name"] == name:
+            if function.name == name:
                 return function
 
     def detect_vuln(self, vuln, function, debug=False):
         program = self.program()
-        ashnazg_log.info(f"  Analyzing {vuln.name}:{function['name']}")
+        ashnazg_log.info(f"  Analyzing {vuln.name}:{function.name}")
         result = vuln.detect(Context(self.binary_elf, self.libc_elf),
                                      function,
-                                     program['functions'],
+                                     program.functions,
                                      self.vuln_args,
                                      debug=debug)
         return result

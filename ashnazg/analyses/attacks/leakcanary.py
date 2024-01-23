@@ -2,9 +2,11 @@ from ..analyses import Vulnerability
 from ..partials.unterminatedbuffer import UnterminatedBuffer
 from ..functions import getLocal
 
-def hasCanary(function):
-    for call in function["calls"]:
-        if call["name"] == "__stack_chk_fail":
+from dorat.schema import DoratFunction
+
+def hasCanary(function: DoratFunction):
+    for call in function.calls:
+        if call.funcName == "__stack_chk_fail":
             return True
     return False
 
