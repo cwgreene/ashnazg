@@ -1,5 +1,3 @@
-import nose
-
 import ashnazg
 import logging
 ashnazg_log = logging.getLogger("ashnazg")
@@ -11,14 +9,14 @@ def check_no_buffer_overflow(binary):
     ash = ashnazg.Ashnazg(binary)
     vulns = ash.find_vulnerable_functions()
     sb_types = [v for v in vulns if isinstance(v, StackBufferOverflowVulnerability) ]
-    nose.tools.ok_(len(sb_types) == 0, "Unexpected buffer Overflow found!")
+    assert len(sb_types) == 0
 
 def check_buffer_overflow(binary):
     ash = ashnazg.Ashnazg(binary)
     vulns = ash.find_vulnerable_functions()
-    nose.tools.ok_(len(vulns) >= 1, f"No vulnerabilities found in {binary}!")
+    assert len(vulns) >= 1, f"No vulnerabilities found in {binary}!"
     sb_types = [v for v in vulns if isinstance(v, StackBufferOverflowVulnerability) ]
-    nose.tools.ok_(len(sb_types) >= 1, "Could not find a StackBufferOverflowVulnerability")
+    assert len(sb_types) >= 1, "Could not find a StackBufferOverflowVulnerability"
 
 def test_can_detect_buffer_overflow_for_gets():
     check_buffer_overflow("test_data/nocanarypie/nocanarypie")
@@ -54,7 +52,7 @@ def exploitbuffer(program):
         conn.send(b"echo hello world\n")
         text = conn.recvuntil(b"hello world\n", timeout=.5)
 
-    nose.tools.ok_(b"hello world\n" in text, "Failed to execute echo command!")
+    assert b"hello world\n" in text, "Failed to execute echo command!"
 
 def test_can_exploit_buffer_overflow():
     exploitbuffer("test_data/nocanarypie/nocanarypie")
