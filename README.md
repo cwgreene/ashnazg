@@ -9,7 +9,7 @@ tools, Ghidra, `dorat`, `ROPgadget`, `pwntools`, `angr`,
 smrop, and binds them together to pop shells.
 
 # Testing
-Run `nose2 --verbose`.
+Run `pytest -vvv`
 
 # Example
 Ashnazg is intended to make it possible to describe
