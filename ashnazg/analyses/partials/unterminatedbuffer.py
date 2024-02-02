@@ -4,7 +4,7 @@ from ..functions import isLocal, isParameter, getLocal
 from ..types import ConcreteValue
 from ashnazg import Connection
 
-from dorat.schema import DoratFunction
+from dorat.schema import DoratFunction, DoratVariable
 
 import logging
 
@@ -16,8 +16,8 @@ logger = logging.getLogger(name=__name__)
 class UnterminatedBuffer(Vulnerability):
     name="UnterminatedBuffer"
 
-    def __init__(self, function : DoratFunction, buffer : str, bufferSize : int):
-        self.function = function
+    def __init__(self, write_call : DoratFunction, buffer : DoratVariable, bufferSize : int):
+        self.write_call = write_call
         self.buffer = buffer
         self.bufferSize = bufferSize
     
@@ -28,13 +28,13 @@ class UnterminatedBuffer(Vulnerability):
                 print(call)
                 if call.funcName in ["read"]:
                     args = call.arguments
-                    print(args)
                     # TODO: buffer doesn't need to be local
                     if args[0] == "0" and isLocal(args[1], function):
                         bufferSize = int(args[2], 16)
+                        bufferVar = getLocal(args[1], function)
                         return UnterminatedBuffer(
-                            function=function,
-                            buffer=getLocal(args[1], function),
+                            write_call=call,
+                            buffer=bufferVar,
                             bufferSize=bufferSize)
             except Exception as e:
                 logger.log(logging.ERROR, e)
@@ -48,7 +48,7 @@ class UnterminatedBuffer(Vulnerability):
         #TODO: detect if we're currently already in the function.
         if len(targetValue) > self.bufferSize:
             raise Exception(f"Requested Concrete Value '{targetValue}' has length {len(targetValue)} which execeeds {self.bufferSize}")
-        conn.navigate(self.function.address)
+        conn.navigate(self.write_call)
         conn.send(targetValue)
     
     def bufferSize(self):

@@ -10,6 +10,7 @@ smrop, and binds them together to pop shells.
 
 # Testing
 Run `pytest -vvv`
+Run `pytest -vvv -n auto`
 
 # Example
 Ashnazg is intended to make it possible to describe

@@ -2,3 +2,4 @@ git+https://github.com/cwgreene/smrop#egg=smrop
 git+https://github.com/cwgreene/dorat#egg=dorat
 angr==9.2.60
 pytest
+pytest-xdist

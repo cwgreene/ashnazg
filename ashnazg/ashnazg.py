@@ -156,6 +156,10 @@ class Connection:
                 self.conn = pwn.process(binary)
         elif remote:
             self.conn = pwn.remote(*remote)
+        
+    def pid(self):
+        if isinstance(self.conn, pwn.process):
+            return self.conn.pid
 
     def navigate(self, function_addr):
         ashnazg_log.info(f"Navigating program to {hex(function_addr)} from {self.active_state}")
