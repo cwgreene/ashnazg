@@ -26,7 +26,7 @@ def test_lldb_init_pwn():
     # process is probably currently at read step
 
     assert tlldb.process.GetProcessID() == p.pid
-    tlldb.set_breakpoint_at(PUTS_LOCATION)
+    res = tlldb.set_breakpoint_at(PUTS_LOCATION)
 
     p.send(b"d\n") # Process is still blocked
     event, state = tlldb.await_breakpoint()
