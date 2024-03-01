@@ -1,4 +1,7 @@
 __pycache__
 BinaryDb.json
 build/
+.vscode
 dependencies/
+ashnazg.egg-info
+.gdb_history
