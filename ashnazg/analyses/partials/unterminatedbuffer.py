@@ -17,9 +17,9 @@ class UnterminatedBuffer(Vulnerability):
     name="UnterminatedBuffer"
 
     def __init__(self, write_call : DoratFunction, buffer : DoratVariable, bufferSize : int):
-        self.write_call = write_call
-        self.buffer = buffer
-        self.bufferSize = bufferSize
+        self.write_call : DoratFunction = write_call
+        self.buffer : DoratVariable = buffer
+        self.bufferSize : int = bufferSize
     
     @staticmethod
     def detect(context, function : DoratFunction, program, options, debug=False):
@@ -48,7 +48,7 @@ class UnterminatedBuffer(Vulnerability):
         #TODO: detect if we're currently already in the function.
         if len(targetValue) > self.bufferSize:
             raise Exception(f"Requested Concrete Value '{targetValue}' has length {len(targetValue)} which execeeds {self.bufferSize}")
-        conn.navigate(self.write_call)
+        conn.navigate(self.write_call.address)
         conn.send(targetValue)
     
     def bufferSize(self):
