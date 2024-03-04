@@ -1,6 +1,7 @@
 from ..analyses import Vulnerability
 from ..partials.unterminatedbuffer import UnterminatedBuffer
 from ..functions import getLocal
+from ....ashnazg import Connection
 
 from dorat.schema import DoratFunction
 
@@ -21,7 +22,7 @@ def overlappingBuffers(buffer1, buffer2):
 class LeakCanary(Vulnerability):
     name = "LeakCanary"
     
-    def __init__(self, function, canary, exploitBuffer):
+    def __init__(self, function, canary, exploitBuffer : UnterminatedBuffer):
         self.function = function
         self.canary = canary
         self.exploitBuffer = exploitBuffer
@@ -41,9 +42,9 @@ class LeakCanary(Vulnerability):
                             canaryBuffer=canary,
                             exploitBuffer=buffer)
     
-    def exploit(self, conn):
+    def exploit(self, conn : Connection):
         conn.navigate(self.function)
-        conn.navigate(self.exploitBuffer.inputLocation)
+        conn.navigate(self.exploitBuffer.write_call)
         conn.send(b"A"*self.exploitBuffer.bufferSize) # not quite right
         self.canaryValue = conn.resolve(self.canary)
         # patch

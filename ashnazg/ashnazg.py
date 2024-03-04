@@ -191,6 +191,11 @@ class Connection:
         self.sim_set_state(found_state)
         ashnazg_log.info(f"Updated state {self.simgr.active}")
     
+    def resolve(self, memory):
+        solver = self.active_state.solver
+        solver.add(self.transcription == self.active_state.posix.stdout)
+        return solver.eval(memory)
+
     # TODO:
     # Is scout really necessary?
     # can we just call navigate with the template?
