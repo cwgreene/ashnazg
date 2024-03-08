@@ -45,3 +45,8 @@ conn.interactive()
 
 # Demos
 https://asciinema.org/a/LX41I396nYxD84xqgnLtKQPIC
+
+# Setting up Virtual Env
+lldb seems to be a bit of a problem. It can't be installed
+via pip, so you probably need to link to your system's install
+via a symlink instead. Blech.
