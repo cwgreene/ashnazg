@@ -3,7 +3,7 @@ import ashnazg
 import pytest
 
 from ashnazg.tlldb import TLLDB
-from ashnazg.analyses.partials.unterminatedbuffer import UnterminatedBuffer
+from ashnazg.analyses.partials import UnterminatedBuffer
 
 def test_unterminated_buffer_detect():
     nazg = ashnazg.Ashnazg(binary="test_data/buffers/unterminated_buffer")

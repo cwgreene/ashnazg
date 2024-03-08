@@ -9,7 +9,12 @@ setup(
    version='1.0',
    description='And in the darkness bind them',
    author_email='archgoon+ashnazg@gmail.com',
-   packages=['ashnazg', 'ashnazg.analyses', "ashnazg.simprocedures"],  #same as name
+   packages=['ashnazg', 
+        'ashnazg.analyses',
+        "ashnazg.simprocedures",
+        "ashnazg.analyses.attacks",
+        "ashnazg.analyses.partials",
+        "ashnazg.tlldb"],  #same as name
    scripts=["bin/ashnazg"],
    install_requires = ["smrop", "dorat"],
    dependency_links = requirements

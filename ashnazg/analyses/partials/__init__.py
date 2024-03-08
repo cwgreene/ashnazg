@@ -1,1 +1,1 @@
-from unterminatedbuffer import UnterminatedBuffer
+from .unterminatedbuffer import UnterminatedBuffer
