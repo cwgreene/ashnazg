@@ -139,7 +139,11 @@ class Connection:
             if symbol in nazg.binary_elf.symbols:
                 nazg.project.hook_symbol('gets', simprocedures.gets())
                 nazg.project.hook_symbol('fread', simprocedures.fread())
+        # symbolicize the canary
+        self.canary = claripy.BVS("canary", 8*8)
         entry_state = nazg.project.factory.entry_state()
+        canary_offset = entry_state.registers.load("fs")+0x28
+        entry_state.memory.store(canary_offset, self.canary)
         entry_state.options.add(angr.options.UNICORN)
         entry_state.options.add(angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY)
         
@@ -193,8 +197,10 @@ class Connection:
     
     def resolve(self, memory):
         solver = self.active_state.solver
-        solver.add(self.transcription == self.active_state.posix.stdout)
-        return solver.eval(memory)
+        for bv, bv_length in self.active_state.posix.stdout:
+            acc = acc.concat(bv)
+        solver.add(self.transcription == acc)
+        return solver.eval(memory, 1) # note this will resolve to *something* unless it is impossible
 
     # TODO:
     # Is scout really necessary?
