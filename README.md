@@ -44,7 +44,14 @@ conn.interactive()
 ```
 
 # Demos
-https://asciinema.org/a/LX41I396nYxD84xqgnLtKQPIC
+Old version (before auto prefix handling)
+- https://asciinema.org/a/LX41I396nYxD84xqgnLtKQPIC
+
+Fully exploitable corctf demo
+- https://asciinema.org/a/tn2gBiwjWzLHne4AtaVX1tIz0
+
+More verbose demo:
+- https://asciinema.org/a/lIQThQCcHrafBRyfuNCmbxR50
 
 # Setting up Virtual Env
 lldb seems to be a bit of a problem. It can't be installed
