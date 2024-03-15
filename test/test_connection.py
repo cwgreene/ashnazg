@@ -6,6 +6,7 @@ def test_connection():
     res = r.recvuntil(b"Secret")
     assert res == b"Secret"
 
+# TODO: This is really testing too much about canaries
 def test_resolve():
     nazg = ashnazg.Ashnazg("test_data/canary/canary_example_putchar")
     conn = nazg.connect()

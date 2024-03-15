@@ -10,3 +10,5 @@ def test_canary():
 
     conn.navigate(buffer.write_call.address)
     conn.send(b"a"*buffer.buffer.size)
+
+    
