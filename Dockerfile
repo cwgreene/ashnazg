@@ -14,6 +14,14 @@ WORKDIR /home/ashnazg
 ADD requirements.txt /home/ashnazg 
 RUN pip3 install -r requirements.txt
 
+# Fix up the lldb madness here
+# for some reason it's missing a bunch of files in the /usr/lib/python3/dist-packages
+# dir. :(
+RUN apt install -y lldb
+COPY Docker.setuplldb.sh setuplldb.sh
+RUN chmod +x setuplldb.sh
+RUN ./setuplldb.sh
+
 # get dorat fully installed
 RUN dorat --install-ghidra --ghidra-install-dir=/home/ghidra --ghidra-scripts-install-dir=/home/ghidrascripts
 COPY Docker.dorat.json /root/.config/github.com/cwgreene/dorat/dorat.json
@@ -27,4 +35,4 @@ ADD ashnazg/ /home/ashnazg/ashnazg
 
 # install it
 RUN pip3 install .
-# Fix up the lldb madness here
+
