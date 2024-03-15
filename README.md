@@ -8,6 +8,11 @@ exploits. It brings together a number of different
 tools, Ghidra, `dorat`, `ROPgadget`, `pwntools`, `angr`,
 smrop, and binds them together to pop shells.
 
+# Install
+The docker file should contain all steps needed to get
+ashnazg running (working on getting lldb hacked together
+it's a mess honestly upstream).
+
 # Testing
 Run `pytest -vvv`
 Run `pytest -vvv -n auto`

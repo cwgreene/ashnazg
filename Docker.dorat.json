@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "GHIDRA_INSTALL_DIR": "/home/ghidra/ghidra_10.3.2_PUBLIC",
+  "GHIDRA_SCRIPTS_DIR": "/home/ghidrascripts",
+  "JAVA_HOME": "/usr/lib/jvm/java-21-openjdk-amd64/bin/java"
+}
