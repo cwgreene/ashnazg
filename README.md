@@ -10,8 +10,12 @@ smrop, and binds them together to pop shells.
 
 # Install
 The docker file should contain all steps needed to get
-ashnazg running (working on getting lldb hacked together
-it's a mess honestly upstream).
+ashnazg running. If you want to set this up outside
+of docker, then the dependencies for ubuntu are there,
+along with the black magic invocations for making lldb
+work with python on ubuntu.
+
+Once running, you can run pytest.
 
 # Testing
 Run `pytest -vvv`
