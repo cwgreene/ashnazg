@@ -122,7 +122,7 @@ class Ashnazg:
         if function in self.binary_elf.plt:
             return self.binary_elf.plt[function]
         if function in self.binary_elf.symbols:
-            return self.binary_elf.symobls[function]
+            return self.binary_elf.symbols[function]
         raise Exception("Could not find function {}".format(function))
 
 class Connection:
@@ -139,6 +139,7 @@ class Connection:
             if symbol in nazg.binary_elf.symbols:
                 nazg.project.hook_symbol('gets', simprocedures.gets())
                 nazg.project.hook_symbol('fread', simprocedures.fread())
+                nazg.project.hook_symbol('putchar', simprocedures.putchar())
         # symbolicize the canary
         self.canary = claripy.BVS("canary", 8*8)
         entry_state = nazg.project.factory.entry_state()
@@ -197,10 +198,11 @@ class Connection:
     
     def resolve(self, memory):
         solver = self.active_state.solver
-        for bv, bv_length in self.active_state.posix.stdout:
+        acc = claripy.BVS("", 0)
+        for bv, bv_length in self.active_state.posix.stdout.content:
             acc = acc.concat(bv)
         solver.add(self.transcription == acc)
-        return solver.eval(memory, 1) # note this will resolve to *something* unless it is impossible
+        return solver.eval(memory).to_bytes(memory.size()//8, "big") # note this will resolve to *something* unless it is impossible
 
     # TODO:
     # Is scout really necessary?
@@ -250,6 +252,7 @@ class Connection:
             self.conn.stdin.flush()
 
     def recv(self, *args, **kwargs):
+        print("Hlelo")
         return self.conn.recv(*args, **kwargs)
 
     def recvuntil(self, *args, **kwargs):
