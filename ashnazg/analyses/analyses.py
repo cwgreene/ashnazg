@@ -1,3 +1,6 @@
+# for forward references
+from __future__ import annotations
+
 import smrop
 import logging
 import json
@@ -42,7 +45,7 @@ class Vulnerability:
     def export(self):
         raise NotImplementedError()
     
-    def dpause(self, conn):
-        if self.debug:
+    def dpause(self, conn : Connection):
+        if conn.debug:
             print(conn.conn.pid)
             pwn.pause()

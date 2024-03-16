@@ -1,3 +1,6 @@
+# for forward references
+from __future__ import annotations
+
 import logging
 import os
 import subprocess
@@ -8,9 +11,7 @@ import claripy
 import pwn
 import smrop
 
-from typing import List, Tuple
-# for forward references
-from __future__ import annotations
+from typing import List, Tuple, Type
 
 from smrop import BinaryDb
 from dorat.schema import DoratProgram, DoratFunction
@@ -85,7 +86,7 @@ class Ashnazg:
             return False
         return True
 
-    def find_vulnerable_functions(self, debug=False) -> List[Vulnerability]:
+    def find_vulnerable_functions(self) -> List[Vulnerability]:
         program = self._doratprogram()
         vulns = []  
         # analyze functions for call
@@ -110,17 +111,35 @@ class Ashnazg:
             if function.name == name:
                 return function
 
-    def detect_vuln(self, vuln, function, debug=False) -> Vulnerability:
+    def detect_vuln(self, vuln : Type[Vulnerability], function : DoratFunction) -> Vulnerability:
+        """Check for specific vulnerabiltiy in a function.
+
+        Args:
+            vuln (Type[Vulnerability]): Vulnerability class object
+            function (DoratFunction): DoratFunction to be analyzed
+            debug (bool, optional): If the instantiated. Defaults to False.
+
+        Returns:
+            Vulnerability: In
+        """        
         program = self._doratprogram()
         ashnazg_log.info(f"  Analyzing {vuln.name}:{function.name}")
         result = vuln.detect(Context(self.binary_elf, self.libc_elf),
                                      function,
                                      program.functions,
-                                     self.vuln_args,
-                                     debug=debug)
+                                     self.vuln_args)
         return result
 
     def connect(self, remote : Tuple[str,int] = None, debug : bool = False) -> Connection:
+        """creates a connection (simulated state and pwntools tube) either locally or remotely (if specified)
+
+        Args:
+            remote (Tuple[str,int], optional): Connect to remote host running the binary. Defaults to None.
+            debug (bool, optional): for local connections use gdb. Defaults to False.
+
+        Returns:
+            Connection: Connection instance
+        """        
         if remote:
             ashnazg_log.info(f"Connecting to {remote}")
             connection = Connection(self, remote=remote) 
@@ -190,8 +209,10 @@ class Connection:
         self.nazg = nazg
         self.transcription = b""
 
+        self.debug = debug
+
         if binary:
-            if debug:
+            if self.debug:
                 self.conn = pwn.gdb.debug(binary)
             else:
                 self.conn = pwn.process(binary)

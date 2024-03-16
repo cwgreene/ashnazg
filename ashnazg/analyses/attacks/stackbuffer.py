@@ -26,8 +26,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
             functionExit,
             stackOffset,
             bufferFunction,
-            bufferSize : int = None,
-            debug : bool = False):
+            bufferSize : int = None):
         self.function = function
         self.binary = binary
         self.libc = libc
@@ -36,7 +35,6 @@ class StackBufferOverflowVulnerability(Vulnerability):
         self.functionExit = functionExit
         self.bufferFunction = bufferFunction
         self.bufferSize = bufferSize
-        self.debug = debug
     
     def __str__(self):
         fields = {
@@ -64,7 +62,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         return [ELF.NO_CANARY, ELF.KNOWN_MAIN, ELF.KNOWN_POP_RDI, ELF.KNOWN_GOT]
 
     @staticmethod
-    def bad_call_gets(call : DoratCall, context, function : DoratFunction, program, options, debug=False): 
+    def bad_call_gets(call : DoratCall, context, function : DoratFunction, program, options): 
         targetFunc = call
         # assume stack for now
         # need to add check to validate
@@ -84,11 +82,10 @@ class StackBufferOverflowVulnerability(Vulnerability):
             targetFunc=targetFunc,
             functionExit=function.exitAddresses[0],
             stackOffset=stackOffset,
-            bufferFunction="gets",
-            debug=debug)
+            bufferFunction="gets")
 
     @staticmethod
-    def bad_call_read(call : DoratCall, context, function : DoratFunction, program, options, debug=False): 
+    def bad_call_read(call : DoratCall, context, function : DoratFunction, program, options): 
         targetBuffer = call.arguments[1]
         source_fd = call.arguments[0]
         
@@ -108,11 +105,10 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     targetFunc=call,
                     functionExit=function.exitAddresses[0],
                     stackOffset=stackOffset,
-                    bufferFunction="read",
-                    debug=debug)
+                    bufferFunction="read")
     
     @staticmethod
-    def bad_call_fgets(call : DoratCall, context, function : DoratFunction, program, options, debug=False): 
+    def bad_call_fgets(call : DoratCall, context, function : DoratFunction, program, options): 
         targetBuffer = call.arguments[0]
         source_file = call.arguments[2]
         
@@ -132,11 +128,10 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     targetFunc=call,
                     functionExit=function.exitAddresses[0],
                     stackOffset=stackOffset,
-                    bufferFunction="fgets",
-                    debug=debug)
+                    bufferFunction="fgets")
     
     @staticmethod
-    def bad_call_fread(call : DoratCall, context, function : DoratFunction, program, options, debug=False): 
+    def bad_call_fread(call : DoratCall, context, function : DoratFunction, program, options): 
         targetBuffer = call.arguments[0]
         source_file = call.arguments[3]
         
@@ -157,11 +152,10 @@ class StackBufferOverflowVulnerability(Vulnerability):
                     functionExit=function.exitAddresses[0],
                     stackOffset=stackOffset,
                     bufferFunction="fread",
-                    bufferSize=targetSize,
-                    debug=debug)
+                    bufferSize=targetSize)
 
     @staticmethod
-    def detect(context, function : DoratFunction, program, options, debug=False):
+    def detect(context, function : DoratFunction, program, options):
         bad_calls = {
             "gets": StackBufferOverflowVulnerability.bad_call_gets,
             "read": StackBufferOverflowVulnerability.bad_call_read,
@@ -171,7 +165,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         for call in function.calls:
             try:
                 if call.funcName in bad_calls:
-                    res = bad_calls[call.funcName](call, context, function, program, options, debug)
+                    res = bad_calls[call.funcName](call, context, function, program, options)
                     if res:
                         return res
                     continue

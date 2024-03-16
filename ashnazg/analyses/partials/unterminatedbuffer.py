@@ -22,7 +22,7 @@ class UnterminatedBuffer(Vulnerability):
         self.bufferSize : int = bufferSize
     
     @staticmethod
-    def detect(context, function : DoratFunction, program, options, debug=False):
+    def detect(context, function : DoratFunction, program, options):
         for call in function.calls:
             try:
                 print(call)
