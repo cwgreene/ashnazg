@@ -8,7 +8,7 @@ import claripy
 import pwn
 import smrop
 
-from typing import List
+from typing import List, Tuple
 # for forward references
 from __future__ import annotations
 
@@ -120,7 +120,7 @@ class Ashnazg:
                                      debug=debug)
         return result
 
-    def connect(self, remote=None, debug=False) -> Connection:
+    def connect(self, remote : Tuple[str,int] = None, debug : bool = False) -> Connection:
         if remote:
             ashnazg_log.info(f"Connecting to {remote}")
             connection = Connection(self, remote=remote) 
@@ -151,7 +151,7 @@ class Connection:
     def __init__(self, 
             nazg : Ashnazg, 
             binary : str = None, 
-            remote : str = None,
+            remote : Tuple[str, int] = None,
             debug : bool = False):
         """Connection - Creates a connection, either remotely or to the process,
         which is running the associated nazg binary. This connection exposes
