@@ -22,8 +22,14 @@ jobs:
             context: .
             file: ./Dockerfile
             tags: ashnazg
-            # outputs: type=oci,dest=/tmp/image.tar
+            outputs: type=oci,dest=/tmp/image.tar
             cache-from: type=gha
             cache-to: type=gha,mode=max
      - name: Test
-       run: docker run ashnazg pytest -vvv --durations=0 --color=yes
+       run: |
+            docker load /tmp/image.tar -t ashnzag
+            docker images
+            docker run ashnazg pytest -vvv --durations=0 --color=yes
+       with:
+         name: ashnazgimage
+         path: /tmp/image.tar
