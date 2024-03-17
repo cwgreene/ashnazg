@@ -22,7 +22,7 @@ jobs:
             context: .
             file: ./Dockerfile
             tags: ashnazg
-            outputs: type=docker,dest="ashnazg.tar"
+            outputs: type=docker,dest=ashnazg.tar
             cache-from: type=gha
             cache-to: type=gha,mode=max
      - name: Test
