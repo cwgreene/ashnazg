@@ -26,4 +26,4 @@ jobs:
             cache-from: type=gha
             cache-to: type=gha,mode=max
      - name: Test
-       run: docker run pytest
+       run: docker run ashnazg -- pytest
