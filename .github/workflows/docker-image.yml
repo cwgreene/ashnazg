@@ -12,10 +12,18 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-     - uses: actions/checkout@v3
-     - uses: docker/setup-buildx-action@v3
-     - uses: docker/build-push-action@v5
+     - name: Standard checkout
+       uses: actions/checkout@v3
+     - name: Set up Docker Buildx
+       uses: docker/setup-buildx-action@v3
+     - name: Build and export
+       uses: docker/build-push-action@v5
        with:
             context: .
+            file: ./Dockerfile
+            tags: ashnazg
+            # outputs: type=oci,dest=/tmp/image.tar
             cache-from: type=gha
             cache-to: type=gha,mode=max
+     - name: Test
+       run: docker run pytest
