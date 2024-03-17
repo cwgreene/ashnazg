@@ -27,6 +27,6 @@ jobs:
             cache-to: type=gha,mode=max
      - name: Test
        run: |
-            docker load /tmp/image.tar -t ashnzag
+            docker load /tmp/image.tar
             docker images
             docker run ashnazg pytest -vvv --durations=0 --color=yes
