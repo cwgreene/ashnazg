@@ -27,7 +27,6 @@ jobs:
             cache-to: type=gha,mode=max
      - name: Test
        run: |
-            ls ashnazg.tar
             docker images
             #cat ashnazg.tar | docker import - ashnazg
             #docker load -i ashnazg.tar
