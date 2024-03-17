@@ -28,6 +28,6 @@ jobs:
      - name: Test
        run: |
             ls ashnazg.tar
-            cat ashnazg.tar | docker import - ashnazg/latest
+            cat ashnazg.tar | docker import - ashnazg
             docker images
             docker run ashnazg pytest -vvv --durations=0 --color=yes
