@@ -30,6 +30,3 @@ jobs:
             docker load /tmp/image.tar -t ashnzag
             docker images
             docker run ashnazg pytest -vvv --durations=0 --color=yes
-       with:
-         name: ashnazgimage
-         path: /tmp/image.tar
