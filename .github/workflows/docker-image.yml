@@ -22,7 +22,7 @@ jobs:
             context: .
             file: ./Dockerfile
             tags: ashnazg
-            outputs: type=tar,dest=ashnazg.tar
+            outputs: type=image
             cache-from: type=gha
             cache-to: type=gha,mode=max
      - name: Test
@@ -30,6 +30,6 @@ jobs:
             ls ashnazg.tar
             docker images
             #cat ashnazg.tar | docker import - ashnazg
-            docker load -i ashnazg.tar
-            docker images
+            #docker load -i ashnazg.tar
+            #docker images
             docker run ashnazg pytest -vvv --durations=0 --color=yes
