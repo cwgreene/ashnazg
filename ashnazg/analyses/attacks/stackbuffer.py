@@ -15,7 +15,7 @@ logger = logging.getLogger(name=__name__)
 class StackBufferOverflowVulnerability(Vulnerability):
     name = "StackBufferOverflowVulnerability"
     short_name = "sbo"
-    options = [("suffix", "str", "Ouput immediately after the buffer overflow call.")]
+    options = []
     EXPLOIT_SIZE = 0x20 #TODO: Compute this properly.
 
     def __init__(self,
