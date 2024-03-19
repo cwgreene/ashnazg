@@ -11,34 +11,44 @@ import logging
 logger = logging.getLogger(name=__name__)
 
 # This partial detects if there is a buffer which
-# is written to that allows for string which is not null terminated.
+# is read from.
 @partial
-class UnterminatedBuffer(Vulnerability):
-    name="UnterminatedBuffer"
+class ReadBuffer(Vulnerability):
+    name="ReadBuffer"
 
     def __init__(self,
-                 write_call : DoratFunction,
+                 read_call : DoratFunction,
                  buffer : DoratVariable,
                  bufferSize : int):
         self.write_call : DoratFunction = write_call
+        self.read_call : DoratFunction = read_call
         self.buffer : DoratVariable = buffer
-        self.bufferSize : int = bufferSize
+        self.bufferRead : int = bufferSize
     
     @staticmethod
     def detect_all(context, function : DoratFunction, program, options):
         result = []
         for call in function.calls:
             try:
-                if call.funcName in ["read"]:
+                if call.funcName in ["write"]:
                     args = call.arguments
-                    # TODO: buffer doesn't need to be local
-                    if args[0] == "0" and isLocal(args[1], function):
+                    if args[0] == "1" and isLocal(args[1], function):
                         bufferSize = int(args[2], 16)
                         bufferVar = getLocal(args[1], function)
-                        result.append(UnterminatedBuffer(
-                            write_call=call,
+                        result.append(ReadBuffer(
+                            read_call=call,
                             buffer=bufferVar,
                             bufferSize=bufferSize))
+                # TODO: Do we want to do this here, or do we
+                # subclass in some sense
+                if call.funcName in ["puts"]:
+                    args = call.arguments
+                    if isLocal(args[0], function):
+                        bufferVar = getLocal(args[1], function)
+                        result.append(ReadBuffer(
+                            read_call=call,
+                            buffer=bufferVar,
+                            bufferRead=None))
             except Exception as e:
                 logger.log(logging.ERROR, e)
                 continue
@@ -55,4 +65,4 @@ class UnterminatedBuffer(Vulnerability):
         conn.send(targetValue)
     
     def bufferSize(self):
-        return self.bufferSize
+        return self.bufferSize#

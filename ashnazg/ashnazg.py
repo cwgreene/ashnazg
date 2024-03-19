@@ -130,6 +130,25 @@ class Ashnazg:
                                      self.vuln_args)
         return result
 
+    def detect_vulns(self, vuln : Type[Vulnerability], function: DoratFunction) -> List[Vulnerability]:
+        """Check for specific vulnerabiltiy in a function.
+
+        Args:
+            vuln (Type[Vulnerability]): Vulnerability class object
+            function (DoratFunction): DoratFunction to be analyzed
+            debug (bool, optional): If the instantiated. Defaults to False.
+
+        Returns:
+            Vulnerability: In
+        """        
+        program = self._doratprogram()
+        ashnazg_log.info(f"  Analyzing {vuln.name}:{function.name}")
+        result = vuln.detect_all(Context(self.binary_elf, self.libc_elf),
+                                     function,
+                                     program.functions,
+                                     self.vuln_args)
+        return result
+
     def connect(self, remote : Tuple[str,int] = None, debug : bool = False) -> Connection:
         """creates a connection (simulated state and pwntools tube) either locally or remotely (if specified)
 

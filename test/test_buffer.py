@@ -8,7 +8,7 @@ from ashnazg.analyses.partials import UnterminatedBuffer
 def test_unterminated_buffer_detect():
     nazg = ashnazg.Ashnazg(binary="test_data/buffers/unterminated_buffer")
     func = nazg.find_function("main")
-    result = nazg.detect_vuln(UnterminatedBuffer, func)
+    result = nazg.detect_vulns(UnterminatedBuffer, func)
     assert result != None
 
 # Verify that buffer.write works.
@@ -16,7 +16,9 @@ def test_unterminated_buffer_write():
     # Find a buffer which is not terminated.
     nazg = ashnazg.Ashnazg(binary="test_data/buffers/unterminated_buffer")
     func = nazg.find_function("main")
-    buffer = nazg.detect_vuln(UnterminatedBuffer, func)
+    buffers = nazg.detect_vulns(UnterminatedBuffer, func)
+    assert isinstance(buffers, list)
+    buffer = buffers[0]
     assert isinstance(buffer, UnterminatedBuffer)
     # Connect to instance and attach debugger for verification
     conn = nazg.connect()

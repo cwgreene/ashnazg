@@ -35,6 +35,10 @@ class Vulnerability:
     def detect(context, function, program):
         raise NotImplementedError()
     
+    @staticmethod
+    def detect_all(context, function, program):
+        raise NotImplementedError()
+    
     # Probably don't care about this interface, we instantiate in detect
     def __init__(self, function, binary : pwn.ELF, libc : pwn.ELF):
         raise NotImplementedError()
