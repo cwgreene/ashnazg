@@ -1,8 +1,8 @@
 from ..analyses import Vulnerability, partial
+from .readbuffer import ReadBuffer
 
 from ..functions import isLocal, isParameter, getLocal
 from ..types import ConcreteValue
-from .buffer import Buffer
 from ashnazg import Connection
 
 from dorat.schema import DoratFunction, DoratVariable
@@ -13,8 +13,8 @@ logger = logging.getLogger(name=__name__)
 
 # This partial detects if there is a buffer which
 # is read from.
-class ReadBuffer(Buffer):
-    name="ReadBuffer"
+class Buffer:
+    name="Buffer"
 
     def __init__(self,
                  read_call : DoratFunction,
@@ -28,6 +28,9 @@ class ReadBuffer(Buffer):
     @staticmethod
     def detect_all(context, function : DoratFunction, program, options):
         result = []
+
+        buffers = {}
+
         for call in function.calls:
             try:
                 if call.funcName in ["write"]:
@@ -53,11 +56,13 @@ class ReadBuffer(Buffer):
                 logger.log(logging.ERROR, e)
                 continue
         return result
-    
-    def read(self, conn : Connection, targetValue : ConcreteValue):
+
+    def write(self, conn : Connection, targetValue : ConcreteValue):
         #TODO: detect if we're currently already in the function.
-        conn.navigate(self.read_call.address)
-        conn.recv()
+        if len(targetValue) > self.bufferSize:
+            raise Exception(f"Requested Concrete Value '{targetValue}' has length {len(targetValue)} which execeeds {self.bufferSize}")
+        conn.navigate(self.write_call.address)
+        conn.send(targetValue)
     
     def bufferSize(self):
         return self.bufferSize#
