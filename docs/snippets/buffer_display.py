@@ -58,7 +58,6 @@ def display_buffers(buffers, memory):
                 buffers_at_i[i].append(buffer)
                 max_buffer_len = max(max_buffer_len, len(buffers_at_i[i]))
 
-    print(buffer_map)
     for j in range(max_buffer_len):
         buffer_line = b""
         for i,c in enumerate(memory):

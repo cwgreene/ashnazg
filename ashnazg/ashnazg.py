@@ -238,7 +238,12 @@ class Connection:
         elif remote:
             self.conn = pwn.remote(*remote)
         
-    def pid(self):
+    def pid(self) -> int:
+        """pid
+
+        Returns:
+            int: pid of underlying process (or None if remote)
+        """
         if isinstance(self.conn, pwn.process):
             return self.conn.pid
 
