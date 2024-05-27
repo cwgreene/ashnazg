@@ -11,8 +11,6 @@ RUN mkdir -p /home/ashnazg
 # Get requirements in as soon as possible since they'll take a while to install
 # and we don't want to do this as much as possible.
 WORKDIR /home/ashnazg
-ADD requirements.txt /home/ashnazg 
-RUN pip3 install -r requirements.txt
 
 # Fix up the lldb madness here
 # for some reason it's missing a bunch of files in the /usr/lib/python3/dist-packages
@@ -22,8 +20,15 @@ COPY Docker.setuplldb.sh setuplldb.sh
 RUN chmod +x setuplldb.sh
 RUN ./setuplldb.sh
 
+# Requirements here. This may need to get kicked
+# on occasion to prevent caching.
+ADD requirements.txt /home/ashnazg 
+RUN pip3 install -r requirements.txt
+
 # get dorat fully installed
-RUN dorat --install-ghidra --ghidra-install-dir=/home/ghidra --ghidra-scripts-install-dir=/home/ghidrascripts
+RUN dorat --install-ghidra \
+    --ghidra-install-dir=/home/ghidra \
+    --ghidra-scripts-install-dir=/home/ghidrascripts
 COPY Docker.dorat.json /root/.config/github.com/cwgreene/dorat/dorat.json
 
 # Copy ashnazg itself
