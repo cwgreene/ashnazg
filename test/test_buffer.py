@@ -9,7 +9,7 @@ def test_unterminated_buffer_detect():
     nazg = ashnazg.Ashnazg(binary="test_data/buffers/unterminated_buffer")
     func = nazg.find_function("main")
     result = nazg.detect_vulns(UnterminatedBuffer, func)
-    assert result != None
+    assert len(result) > 0
 
 # Verify that buffer.write works.
 def test_unterminated_buffer_write():
