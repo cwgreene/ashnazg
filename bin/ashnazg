@@ -12,7 +12,7 @@ def exploit(options, vuln_args):
     nazg = ashnazg.Ashnazg(options.binary, libc=options.libc, vuln_args=vuln_args)
 
     # find a vulnerable function
-    vulns = list(nazg.find_vulnerable_functions(debug=options.debug))
+    vulns = list(nazg.find_vulnerable_functions())
     if not vulns:
         print("No vulnerable functions found!")
         return
