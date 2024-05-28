@@ -8,6 +8,7 @@ from ashnazg.analyses.partials import UnterminatedBuffer
 def test_unterminated_buffer_detect():
     nazg = ashnazg.Ashnazg(binary="test_data/buffers/unterminated_buffer")
     func = nazg.find_function("main")
+    assert func is not None
     result = nazg.detect_vulns(UnterminatedBuffer, func)
     assert len(result) > 0
 

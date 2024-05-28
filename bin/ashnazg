@@ -67,13 +67,14 @@ def main():
 
     vuln_args = parse_vuln_args(options)
 
+    red = lambda s: f"{colorama.Fore.RED}{s}{colorama.Fore.RESET}"
+    yellow = lambda s: f"{colorama.Fore.YELLOW}{s}{colorama.Fore.RESET}"
+    blue = lambda s: f"{colorama.Fore.BLUE}{s}{colorama.Fore.RESET}"
+    green = lambda s: f"{colorama.Fore.GREEN}{s}{colorama.Fore.RESET}"
+
     if options.verbose:
         logging.getLogger("ashnazg").setLevel("DEBUG")
     if options.list:
-        red = lambda s: f"{colorama.Fore.RED}{s}{colorama.Fore.RESET}"
-        yellow = lambda s: f"{colorama.Fore.YELLOW}{s}{colorama.Fore.RESET}"
-        blue = lambda s: f"{colorama.Fore.BLUE}{s}{colorama.Fore.RESET}"
-        green = lambda s: f"{colorama.Fore.GREEN}{s}{colorama.Fore.RESET}"
         for vuln in ashnazg.analyses.ANALYSES:
             print(f"{yellow(vuln.name)} [{blue(vuln.short_name)}]")
             for option, type, desc in vuln.options:
@@ -81,7 +82,11 @@ def main():
                 print(f"  {blue(option_path)} [{green(type)}] {desc}")
         return
     if not options.binary:
-        print("Need to specify --binary")
+        print(red("Need to specify --binary"))
+        parser.print_help()
+        return
+    if not options.libc:
+        print(red("Need to specify --libc"))
         parser.print_help()
         return
     if options.detect:
