@@ -1,10 +1,10 @@
 {
   "version": "2",
-  "groups": [
+  "groups": [{
       "name": "default",
       "GHIDRA_VERSION": "ghidra_10.3.2_PUBLIC",
       "GHIDRA_INSTALL_DIR": "/home/ghidra/",
       "GHIDRA_SCRIPTS_DIR": "/home/ghidrascripts",
       "JAVA_HOME": "/usr/lib/jvm/java-21-openjdk-amd64/bin/java"
-  ]
+  }]
 }
